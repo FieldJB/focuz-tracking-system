@@ -1,11 +1,11 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { Activity, Barcode, LayoutDashboard, History, AlertTriangle, CheckCircle, ArrowRightLeft, ArrowRight, Factory, X, UploadCloud, FileSpreadsheet, Server } from 'lucide-react';
+import { Activity, Barcode, LayoutDashboard, History, AlertTriangle, CheckCircle, ArrowRightLeft, ArrowRight, Factory, X, UploadCloud, FileSpreadsheet, Server, Trash2 } from 'lucide-react';
 
 // === FIREBASE CLOUD DATABASE IMPORTS ===
 import { initializeApp } from 'firebase/app';
 import { getAuth, signInWithCustomToken, signInAnonymously, onAuthStateChanged } from 'firebase/auth';
-// POKA-YOKE: Swapped Firestore for Realtime Database imports
-import { getDatabase, ref, onValue, set } from 'firebase/database';
+// POKA-YOKE: Swapped Firestore for Realtime Database imports. Added 'remove' for data deletion.
+import { getDatabase, ref, onValue, set, remove } from 'firebase/database';
 
 // === FIREBASE CONFIGURATION ===
 // POKA-YOKE: Handles both local Canvas testing and your future Vercel deployment
@@ -61,6 +61,7 @@ export default function App() {
   const [activeTab, setActiveTab] = useState('dashboard');
   const [showReworkModal, setShowReworkModal] = useState(false);
   const [toast, setToast] = useState(null); // Replaces browser alerts
+  const [txToDelete, setTxToDelete] = useState(null); // NEW: State for deletion modal
 
   // Form State
   const [scanSn, setScanSn] = useState('');
@@ -236,7 +237,7 @@ export default function App() {
           from: fromStage,
           to: toStage,
           action: actionLabel,
-          user: operatorRole, // UPDATED: Logs the human-readable role instead of UID
+          user: operatorRole, 
           defect: finalDefect,
           location: finalLocation
         };
@@ -301,7 +302,7 @@ export default function App() {
       from: fromStage,
       to: toStage,
       action: actionLabel,
-      user: operatorRole, // UPDATED: Logs the human-readable role instead of UID
+      user: operatorRole, 
       defect: scanAction === 'Return for Rework' ? scanDefect : 'None',
       location: scanAction === 'Return for Rework' ? scanLocation || 'N/A' : 'N/A'
     };
@@ -320,6 +321,21 @@ export default function App() {
     } catch (err) {
       console.error(err);
       showToast("Cloud Connection Error: Check network.", "error");
+    }
+  };
+
+  // === NEW: DELETE TRANSACTION LOGIC ===
+  const confirmDeleteTransaction = async () => {
+    if (!txToDelete) return;
+    try {
+      const txDocRef = ref(db, `artifacts/${appId}/public/data/transactions/${txToDelete.id}`);
+      await remove(txDocRef);
+      showToast(`Success: Transaction log deleted from Cloud.`);
+    } catch (err) {
+      console.error(err);
+      showToast("Database Error: Failed to delete record.", "error");
+    } finally {
+      setTxToDelete(null); // Close the modal
     }
   };
 
@@ -687,7 +703,7 @@ export default function App() {
     );
 
     return (
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+      <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 relative">
         <div className="flex justify-between items-center mb-6">
           <h2 className="text-2xl font-bold text-gray-800">Global Traceability History</h2>
           <input 
@@ -710,11 +726,12 @@ export default function App() {
                 <th className="p-3">Defect Logged</th>
                 <th className="p-3">Location (Ref Des)</th>
                 <th className="p-3">User/Auth ID</th>
+                <th className="p-3 text-center">Delete</th>
               </tr>
             </thead>
             <tbody>
               {filteredTx.length === 0 ? (
-                <tr><td colSpan="7" className="text-center py-8 text-gray-400">Database is empty. Upload a CSV to begin tracking.</td></tr>
+                <tr><td colSpan="8" className="text-center py-8 text-gray-400">Database is empty. Upload a CSV to begin tracking.</td></tr>
               ) : (
                 filteredTx.map(tx => (
                   <tr key={tx.id} className="border-b border-gray-50 hover:bg-gray-50">
@@ -738,8 +755,17 @@ export default function App() {
                          </span>
                       ) : '-'}
                     </td>
-                    {/* Shows partial UID for visual clarity without crowding the table */}
-                    <td className="p-3 text-gray-600 font-mono text-xs" title={tx.user}>{tx.user.substring(0, 8)}...</td>
+                    <td className="p-3 text-gray-600 font-mono text-xs" title={tx.user}>{tx.user.length > 15 ? tx.user.substring(0, 15) + '...' : tx.user}</td>
+                    <td className="p-3 text-center">
+                       {/* POKA-YOKE: Trigger verification modal instead of immediate deletion */}
+                       <button 
+                         onClick={() => setTxToDelete(tx)}
+                         className="p-2 bg-gray-100 hover:bg-red-100 text-gray-400 hover:text-red-600 rounded-lg transition-colors"
+                         title="Delete Record"
+                       >
+                         <Trash2 size={16} />
+                       </button>
+                    </td>
                   </tr>
                 ))
               )}
@@ -768,6 +794,44 @@ export default function App() {
         <div className={`fixed top-4 left-1/2 transform -translate-x-1/2 px-6 py-3 rounded-lg shadow-xl z-50 flex items-center gap-2 font-bold text-sm ${toast.type === 'error' ? 'bg-red-600 text-white' : 'bg-green-600 text-white'}`}>
           {toast.type === 'error' ? <AlertTriangle size={18} /> : <CheckCircle size={18} />}
           {toast.message}
+        </div>
+      )}
+
+      {/* DELETE CONFIRMATION MODAL (Poka-Yoke Gate) */}
+      {txToDelete && (
+        <div className="fixed inset-0 bg-slate-900/60 flex items-center justify-center z-[60] p-4 backdrop-blur-sm">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden flex flex-col">
+            <div className="p-6 text-center">
+              <div className="mx-auto w-16 h-16 bg-red-100 text-red-600 rounded-full flex items-center justify-center mb-4">
+                <AlertTriangle size={32} />
+              </div>
+              <h3 className="text-2xl font-black text-gray-800 mb-2">Confirm Deletion</h3>
+              <p className="text-gray-600 text-sm mb-4">
+                Are you sure you want to permanently delete the log for <span className="font-bold text-red-600">{txToDelete.sn}</span>? This will remove the traceability record from the global database.
+              </p>
+              
+              <div className="bg-gray-50 border border-gray-200 rounded-lg p-3 text-left text-xs text-gray-500 font-mono mb-6">
+                <p><strong>Action:</strong> {txToDelete.action}</p>
+                <p><strong>Timestamp:</strong> {txToDelete.timestamp}</p>
+                <p><strong>Operator ID:</strong> {txToDelete.user}</p>
+              </div>
+
+              <div className="flex gap-3">
+                <button 
+                  onClick={() => setTxToDelete(null)}
+                  className="flex-1 py-3 bg-gray-100 hover:bg-gray-200 text-gray-800 font-bold rounded-xl transition-colors"
+                >
+                  Cancel
+                </button>
+                <button 
+                  onClick={confirmDeleteTransaction}
+                  className="flex-1 py-3 bg-red-600 hover:bg-red-700 text-white font-bold rounded-xl shadow-lg shadow-red-200 transition-colors flex items-center justify-center gap-2"
+                >
+                  <Trash2 size={18} /> Delete Record
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
       )}
 
