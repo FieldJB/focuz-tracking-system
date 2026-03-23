@@ -14,13 +14,13 @@ const getFirebaseConfig = () => {
     return JSON.parse(__firebase_config);
   }
   return {
-    // FOCUZ IT TEAM: Paste your real Vercel Firebase config here later
-    apiKey: "YOUR_API_KEY",
-    authDomain: "YOUR_PROJECT.firebaseapp.com",
-    projectId: "YOUR_PROJECT_ID",
-    storageBucket: "YOUR_PROJECT.appspot.com",
-    messagingSenderId: "YOUR_SENDER_ID",
-    appId: "YOUR_APP_ID"
+    apiKey: "AIzaSyDKXNIyKPoZ6wKM8BLerJNsC8iw_wclUHI",
+  authDomain: "focuz-cloud-mes.firebaseapp.com",
+  projectId: "focuz-cloud-mes",
+  storageBucket: "focuz-cloud-mes.firebasestorage.app",
+  messagingSenderId: "1082764054889",
+  appId: "1:1082764054889:web:00d10ea1382f3b7aaf6df8",
+  measurementId: "G-V65DL05WJ4"
   };
 };
 
