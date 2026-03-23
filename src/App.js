@@ -14,13 +14,13 @@ const getFirebaseConfig = () => {
     return JSON.parse(__firebase_config);
   }
   return {
-    apiKey: "AIzaSyDKXNIyKPoZ6wKM8BLerJNsC8iw_wclUHI",
-  authDomain: "focuz-cloud-mes.firebaseapp.com",
-  projectId: "focuz-cloud-mes",
-  storageBucket: "focuz-cloud-mes.firebasestorage.app",
-  messagingSenderId: "1082764054889",
-  appId: "1:1082764054889:web:00d10ea1382f3b7aaf6df8",
-  measurementId: "G-V65DL05WJ4"
+    // FOCUZ IT TEAM: Paste your real Vercel Firebase config here later
+    apiKey: "YOUR_API_KEY",
+    authDomain: "YOUR_PROJECT.firebaseapp.com",
+    projectId: "YOUR_PROJECT_ID",
+    storageBucket: "YOUR_PROJECT.appspot.com",
+    messagingSenderId: "YOUR_SENDER_ID",
+    appId: "YOUR_APP_ID"
   };
 };
 
@@ -69,6 +69,18 @@ export default function App() {
   const [scanLocation, setScanLocation] = useState('');
   const [uploadMode, setUploadMode] = useState('manual');
   const [bulkAction, setBulkAction] = useState('Transfer to Prysm');
+
+  // === NEW: HUMAN-READABLE ROLE IDENTIFICATION ===
+  const [operatorRole, setOperatorRole] = useState(() => {
+    // Poka-Yoke: Remember the last selected role on this specific device
+    return localStorage.getItem('focuz_operator_role') || 'SMT-Operator';
+  });
+
+  useEffect(() => {
+    localStorage.setItem('focuz_operator_role', operatorRole);
+  }, [operatorRole]);
+
+  const ROLE_OPTIONS = ['SMT-Operator', 'SMT-Engineer', 'PRYSM-Operator', 'PRYSM-Engineer', 'Quality-Inspector'];
 
   // Helper to show on-screen notifications instead of freezing the app with alert()
   const showToast = (message, type = 'success') => {
@@ -224,7 +236,7 @@ export default function App() {
           from: fromStage,
           to: toStage,
           action: actionLabel,
-          user: user?.uid || 'Unknown-Operator', 
+          user: operatorRole, // UPDATED: Logs the human-readable role instead of UID
           defect: finalDefect,
           location: finalLocation
         };
@@ -289,7 +301,7 @@ export default function App() {
       from: fromStage,
       to: toStage,
       action: actionLabel,
-      user: user?.uid || 'Unknown-Operator', 
+      user: operatorRole, // UPDATED: Logs the human-readable role instead of UID
       defect: scanAction === 'Return for Rework' ? scanDefect : 'None',
       location: scanAction === 'Return for Rework' ? scanLocation || 'N/A' : 'N/A'
     };
@@ -793,9 +805,18 @@ export default function App() {
         </div>
 
         {/* Multi-User Identify Tag */}
-        <div className="p-4 border-t border-gray-100 text-xs text-gray-500">
-           <p className="font-bold mb-1">Operator ID:</p>
-           <p className="font-mono bg-gray-100 p-1 rounded overflow-hidden text-ellipsis">{user?.uid || 'Connecting...'}</p>
+        <div className="p-4 border-t border-gray-100 text-sm">
+           <p className="font-bold text-gray-700 mb-2">Station Assignment:</p>
+           <select 
+             value={operatorRole}
+             onChange={(e) => setOperatorRole(e.target.value)}
+             className="w-full p-2 border-2 border-orange-200 rounded-lg focus:border-orange-500 outline-none bg-orange-50 text-orange-900 font-bold text-xs"
+           >
+             {ROLE_OPTIONS.map(role => <option key={role} value={role}>{role}</option>)}
+           </select>
+           <p className="text-[10px] text-gray-400 mt-2 font-mono truncate" title={user?.uid}>
+             UID: {user?.uid || 'Connecting...'}
+           </p>
         </div>
       </nav>
 
