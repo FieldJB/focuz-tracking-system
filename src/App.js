@@ -81,7 +81,7 @@ export default function App() {
     localStorage.setItem('focuz_operator_role', operatorRole);
   }, [operatorRole]);
 
-  const ROLE_OPTIONS = ['SMT-Operator', 'SMT-Engineer', 'PRYSM-Operator', 'PRYSM-Engineer', 'Quality-Inspector'];
+  const ROLE_OPTIONS = ['SMT-Operator', 'SMT-Engineer', 'PRYSM-Engineer', 'PRYSM-Tester'];
 
   // Helper to show on-screen notifications instead of freezing the app with alert()
   const showToast = (message, type = 'success') => {
