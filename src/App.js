@@ -475,6 +475,7 @@ export default function App() {
             </table>
           </div>
         </div>
+      </div>
 
       {/* REWORK DETAILS MODAL (Pop-up) */}
       {showReworkModal && (
