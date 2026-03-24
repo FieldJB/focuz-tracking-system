@@ -63,6 +63,10 @@ export default function App() {
   const [toast, setToast] = useState(null); // Replaces browser alerts
   const [txToDelete, setTxToDelete] = useState(null); // NEW: State for deletion modal
 
+  // === NEW: TRACEABILITY LOG FILTERS ===
+  const [filterAction, setFilterAction] = useState('All');
+  const [filterRoute, setFilterRoute] = useState('All');
+
   // Form State
   const [scanSn, setScanSn] = useState('');
   const [scanAction, setScanAction] = useState('Transfer to Prysm');
@@ -87,6 +91,22 @@ export default function App() {
   const showToast = (message, type = 'success') => {
     setToast({ message, type });
     setTimeout(() => setToast(null), 5000);
+  };
+
+  // === NEW: IPC-1782 STANDARDIZED TIMESTAMP FORMATTER ===
+  // Converts any localized browser time into a strict 24-hour format (DD/MM/YYYY HH:MM:SS)
+  const formatTimestamp = (dateString) => {
+    try {
+      const d = new Date(dateString);
+      if (isNaN(d.getTime())) return dateString; // Fallback if invalid data exists
+      return d.toLocaleString('en-GB', { 
+        year: 'numeric', month: '2-digit', day: '2-digit', 
+        hour: '2-digit', minute: '2-digit', second: '2-digit', 
+        hour12: false 
+      }).replace(',', '');
+    } catch {
+      return dateString;
+    }
   };
 
   // === SIX SIGMA CONTROL PHASE: STRICT AUTHENTICATION GATE ===
@@ -233,7 +253,7 @@ export default function App() {
         const newTx = {
           id: txId,
           sn: rawSn,
-          timestamp: new Date().toLocaleString(),
+          timestamp: formatTimestamp(new Date()), // UPDATED: Strict standard time
           from: fromStage,
           to: toStage,
           action: actionLabel,
@@ -298,7 +318,7 @@ export default function App() {
     const newTx = {
       id: txId,
       sn: scanSn,
-      timestamp: new Date().toLocaleString(),
+      timestamp: formatTimestamp(new Date()), // UPDATED: Strict standard time
       from: fromStage,
       to: toStage,
       action: actionLabel,
@@ -385,13 +405,13 @@ export default function App() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 h-[calc(100vh-280px)] min-h-[400px]">
         {/* Recent Activity */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
-          <h3 className="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2">
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 flex flex-col">
+          <h3 className="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2 shrink-0">
             <Activity size={20} className="text-blue-500"/> Live Cloud Movements
           </h3>
-          <div className="space-y-3 h-64 overflow-y-auto">
+          <div className="space-y-3 overflow-y-auto flex-1 pr-2">
             {transactions.length === 0 ? (
               <div className="text-center text-gray-400 italic py-10">Awaiting initial scans...</div>
             ) : (
@@ -399,7 +419,7 @@ export default function App() {
                 <div key={tx.id} className="flex justify-between items-center p-3 bg-gray-50 rounded-lg text-sm">
                   <div>
                     <div className="font-bold text-gray-700">{tx.sn}</div>
-                    <div className="text-gray-500 text-xs">{tx.timestamp}</div>
+                    <div className="text-gray-500 text-xs">{formatTimestamp(tx.timestamp)}</div>
                   </div>
                   <div className="flex flex-col items-end">
                     <div className="flex items-center gap-2 text-gray-600 mb-1">
@@ -420,40 +440,41 @@ export default function App() {
         </div>
 
         {/* High Rework Boards */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
-          <h3 className="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2">
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 flex flex-col">
+          <h3 className="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2 shrink-0">
             <AlertTriangle size={20} className="text-orange-500"/> High Rework Attention
           </h3>
-          <table className="w-full text-left text-sm">
-            <thead className="bg-gray-50 text-gray-600">
-              <tr>
-                <th className="p-2 rounded-tl-lg">Serial Number</th>
-                <th className="p-2">Current Stage</th>
-                <th className="p-2 rounded-tr-lg">Rework Cycles</th>
-              </tr>
-            </thead>
-            <tbody>
-              {metrics.highRework.length === 0 ? (
-                 <tr><td colSpan="3" className="text-center text-gray-400 italic py-6">No rework data yet.</td></tr>
-              ) : (
-                metrics.highRework.map(b => (
-                  <tr key={b.sn} className="border-b border-gray-50">
-                    <td className="p-2 font-medium">{b.sn}</td>
-                    <td className="p-2">
-                      <span className={b.currentStage === STAGES.REWORK ? 'text-red-600 font-bold' : ''}>{b.currentStage}</span>
-                    </td>
-                    <td className="p-2">
-                      <span className={`px-2 py-1 rounded-full text-xs font-bold ${b.reworkCycles > 1 ? 'bg-red-100 text-red-700' : 'bg-orange-100 text-orange-700'}`}>
-                        {b.reworkCycles} Cycles
-                      </span>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
+          <div className="overflow-y-auto flex-1 pr-2">
+            <table className="w-full text-left text-sm relative">
+              <thead className="bg-gray-50 text-gray-600 sticky top-0 z-10 shadow-sm">
+                <tr>
+                  <th className="p-2 rounded-tl-lg bg-gray-50">Serial Number</th>
+                  <th className="p-2 bg-gray-50">Current Stage</th>
+                  <th className="p-2 rounded-tr-lg bg-gray-50">Rework Cycles</th>
+                </tr>
+              </thead>
+              <tbody>
+                {metrics.highRework.length === 0 ? (
+                  <tr><td colSpan="3" className="text-center text-gray-400 italic py-6">No rework data yet.</td></tr>
+                ) : (
+                  metrics.highRework.map(b => (
+                    <tr key={b.sn} className="border-b border-gray-50">
+                      <td className="p-2 font-medium">{b.sn}</td>
+                      <td className="p-2">
+                        <span className={b.currentStage === STAGES.REWORK ? 'text-red-600 font-bold' : ''}>{b.currentStage}</span>
+                      </td>
+                      <td className="p-2">
+                        <span className={`px-2 py-1 rounded-full text-xs font-bold ${b.reworkCycles > 1 ? 'bg-red-100 text-red-700' : 'bg-orange-100 text-orange-700'}`}>
+                          {b.reworkCycles} Cycles
+                        </span>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
         </div>
-      </div>
 
       {/* REWORK DETAILS MODAL (Pop-up) */}
       {showReworkModal && (
@@ -696,46 +717,80 @@ export default function App() {
   );
 
   const renderHistory = () => {
-    const filteredTx = transactions.filter(tx => 
-      tx.sn.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      tx.user.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (tx.location && tx.location.toLowerCase().includes(searchQuery.toLowerCase()))
-    );
+    // Dynamically generate filter options based on the actual factory data
+    const actionOptions = ['All', ...new Set(transactions.map(t => t.action))];
+    const routeOptions = ['All', ...new Set(transactions.map(t => `${t.from} \u2192 ${t.to}`))];
+
+    const filteredTx = transactions.filter(tx => {
+      const matchesSearch = tx.sn.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                            tx.user.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                            (tx.location && tx.location.toLowerCase().includes(searchQuery.toLowerCase()));
+      
+      const matchesAction = filterAction === 'All' || tx.action === filterAction;
+      const matchesRoute = filterRoute === 'All' || `${tx.from} \u2192 ${tx.to}` === filterRoute;
+      
+      return matchesSearch && matchesAction && matchesRoute;
+    });
 
     return (
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 relative">
-        <div className="flex justify-between items-center mb-6">
+      <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 relative flex flex-col h-[calc(100vh-120px)]">
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4 shrink-0">
           <h2 className="text-2xl font-bold text-gray-800">Global Traceability History</h2>
-          <input 
-            type="text" 
-            placeholder="Search SN, Operator, or Location..." 
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="p-2 border border-gray-200 rounded-lg w-72 focus:border-orange-500 outline-none text-sm"
-          />
+          
+          <div className="flex flex-col md:flex-row gap-3 w-full md:w-auto">
+            {/* ACTION FILTER */}
+            <select 
+              value={filterAction}
+              onChange={(e) => setFilterAction(e.target.value)}
+              className="p-2 border border-gray-200 rounded-lg text-sm focus:border-orange-500 outline-none bg-gray-50 font-medium text-gray-700"
+              title="Filter by Action"
+            >
+              <option value="All">All Actions</option>
+              {actionOptions.filter(opt => opt !== 'All').map(opt => <option key={opt} value={opt}>{opt}</option>)}
+            </select>
+            
+            {/* ROUTE FILTER */}
+            <select 
+              value={filterRoute}
+              onChange={(e) => setFilterRoute(e.target.value)}
+              className="p-2 border border-gray-200 rounded-lg text-sm focus:border-orange-500 outline-none bg-gray-50 font-medium text-gray-700"
+              title="Filter by Route"
+            >
+              <option value="All">All Routes</option>
+              {routeOptions.filter(opt => opt !== 'All').map(opt => <option key={opt} value={opt}>{opt}</option>)}
+            </select>
+
+            <input 
+              type="text" 
+              placeholder="Search SN, Operator, or Loc..." 
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="p-2 border border-gray-200 rounded-lg w-full md:w-64 focus:border-orange-500 outline-none text-sm"
+            />
+          </div>
         </div>
 
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-sm">
-            <thead className="bg-gray-50 text-gray-600 border-y border-gray-200">
+        <div className="overflow-auto flex-1 border border-gray-100 rounded-lg">
+          <table className="w-full text-left text-sm relative">
+            <thead className="bg-gray-50 text-gray-600 border-b border-gray-200 sticky top-0 z-10 shadow-sm">
               <tr>
-                <th className="p-3">Timestamp</th>
-                <th className="p-3">Serial Number</th>
-                <th className="p-3">Action</th>
-                <th className="p-3">From &rarr; To</th>
-                <th className="p-3">Defect Logged</th>
-                <th className="p-3">Location (Ref Des)</th>
-                <th className="p-3">User/Auth ID</th>
-                <th className="p-3 text-center">Delete</th>
+                <th className="p-3 bg-gray-50">Timestamp</th>
+                <th className="p-3 bg-gray-50">Serial Number</th>
+                <th className="p-3 bg-gray-50">Action</th>
+                <th className="p-3 bg-gray-50">From &rarr; To</th>
+                <th className="p-3 bg-gray-50">Defect Logged</th>
+                <th className="p-3 bg-gray-50">Location (Ref Des)</th>
+                <th className="p-3 bg-gray-50">User/Auth ID</th>
+                <th className="p-3 text-center bg-gray-50">Delete</th>
               </tr>
             </thead>
             <tbody>
               {filteredTx.length === 0 ? (
-                <tr><td colSpan="8" className="text-center py-8 text-gray-400">Database is empty. Upload a CSV to begin tracking.</td></tr>
+                <tr><td colSpan="8" className="text-center py-8 text-gray-400">No records match your filters.</td></tr>
               ) : (
                 filteredTx.map(tx => (
                   <tr key={tx.id} className="border-b border-gray-50 hover:bg-gray-50">
-                    <td className="p-3 text-gray-500">{tx.timestamp}</td>
+                    <td className="p-3 text-gray-500 font-mono text-xs">{formatTimestamp(tx.timestamp)}</td>
                     <td className="p-3 font-bold text-gray-800">{tx.sn}</td>
                     <td className="p-3">
                       <span className={`px-2 py-1 rounded-full text-xs font-semibold
@@ -843,7 +898,7 @@ export default function App() {
             <text x="45" y="40" fontFamily="Georgia, serif" fontStyle="italic" fontWeight="bold" fontSize="42" fill="#e04616">Focuz</text>
             <text x="50" y="55" fontFamily="Arial, sans-serif" fontWeight="bold" fontSize="11" fill="#475569" letterSpacing="1">MANUFACTURING SERVICES</text>
           </svg>
-          <h1 className="text-lg font-black tracking-tight text-slate-800">Cloud MES System</h1>
+          <h1 className="text-lg font-black tracking-tight text-slate-800">Focuz Tracking System</h1>
           <p className="text-orange-600 text-xs font-bold uppercase tracking-wider mt-1">Quality Control</p>
         </div>
         
