@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { Activity, Barcode, LayoutDashboard, History, AlertTriangle, CheckCircle, ArrowRightLeft, ArrowRight, Factory, X, UploadCloud, FileSpreadsheet, Server, Trash2 } from 'lucide-react';
+import { Activity, Barcode, LayoutDashboard, History, AlertTriangle, CheckCircle, ArrowRightLeft, ArrowRight, Factory, X, UploadCloud, FileSpreadsheet, Server, Trash2, LogOut, Lock } from 'lucide-react';
 
 // === FIREBASE CLOUD DATABASE IMPORTS ===
 import { initializeApp } from 'firebase/app';
@@ -63,6 +63,14 @@ export default function App() {
   const [toast, setToast] = useState(null); // Replaces browser alerts
   const [txToDelete, setTxToDelete] = useState(null); // NEW: State for deletion modal
 
+  // === NEW: POKA-YOKE SECURITY GATE STATE ===
+  const [isAppLocked, setIsAppLocked] = useState(() => {
+    return localStorage.getItem('focuz_mes_auth') !== 'true';
+  });
+  const [loginUser, setLoginUser] = useState('');
+  const [loginPass, setLoginPass] = useState('');
+  const [loginError, setLoginError] = useState('');
+
   // === NEW: TRACEABILITY LOG FILTERS ===
   const [filterAction, setFilterAction] = useState('All');
   const [filterRoute, setFilterRoute] = useState('All');
@@ -107,6 +115,34 @@ export default function App() {
     } catch {
       return dateString;
     }
+  };
+
+  // === SEPARATED LOGIN & LOGOUT LOGIC ===
+  const handleLogin = (e) => {
+    e.preventDefault();
+    const userLower = loginUser.toLowerCase();
+    
+    // Front-line security gate with separated credentials for SMT vs PRYSM
+    if (userLower === 'smt' && loginPass === 'smt') {
+      setIsAppLocked(false);
+      setLoginError('');
+      localStorage.setItem('focuz_mes_auth', 'true');
+      setOperatorRole('SMT-Operator'); // Poka-Yoke: Auto-assign role to prevent mismatch
+    } else if (userLower === 'prysm' && loginPass === 'prysm') {
+      setIsAppLocked(false);
+      setLoginError('');
+      localStorage.setItem('focuz_mes_auth', 'true');
+      setOperatorRole('PRYSM-Tester'); // Poka-Yoke: Auto-assign role to prevent mismatch
+    } else {
+      setLoginError('Unauthorized: Invalid Station Credentials');
+    }
+  };
+
+  const handleLogout = () => {
+    setIsAppLocked(true);
+    localStorage.removeItem('focuz_mes_auth');
+    setLoginUser('');
+    setLoginPass('');
   };
 
   // === SIX SIGMA CONTROL PHASE: STRICT AUTHENTICATION GATE ===
@@ -842,6 +878,65 @@ export default function App() {
     );
   }
 
+  // === NEW: RENDER LOGIN SCREEN IF LOCKED ===
+  if (isAppLocked) {
+    return (
+      <div className="min-h-screen bg-slate-900 flex items-center justify-center p-4 font-sans">
+        <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden flex flex-col">
+          <div className="p-8 bg-orange-600 flex flex-col items-center justify-center text-white">
+            <Lock size={48} className="mb-4 opacity-90" />
+            <h1 className="text-2xl font-black tracking-tight">Focuz MES Secure Login</h1>
+            <p className="text-orange-200 text-sm font-medium mt-1 uppercase tracking-wider">Authorized Personnel Only</p>
+          </div>
+          
+          <form onSubmit={handleLogin} className="p-8 space-y-6">
+            {loginError && (
+              <div className="bg-red-50 text-red-600 p-3 rounded-lg text-sm font-bold flex items-center gap-2">
+                <AlertTriangle size={16} />
+                {loginError}
+              </div>
+            )}
+            
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-1">Station ID / Username</label>
+              <input 
+                type="text" 
+                value={loginUser}
+                onChange={(e) => setLoginUser(e.target.value)}
+                className="w-full p-3 border-2 border-gray-200 rounded-xl focus:border-orange-500 outline-none transition-colors"
+                placeholder="e.g., smt or prysm"
+                required
+              />
+            </div>
+            
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-1">Passcode</label>
+              <input 
+                type="password" 
+                value={loginPass}
+                onChange={(e) => setLoginPass(e.target.value)}
+                className="w-full p-3 border-2 border-gray-200 rounded-xl focus:border-orange-500 outline-none transition-colors"
+                placeholder="••••••"
+                required
+              />
+            </div>
+            
+            <button 
+              type="submit"
+              className="w-full py-4 bg-orange-600 hover:bg-orange-700 text-white rounded-xl font-bold text-lg shadow-lg shadow-orange-200 transition-all"
+            >
+              Access Dashboard
+            </button>
+          </form>
+          
+          <div className="p-4 bg-gray-50 text-center border-t border-gray-100">
+            <p className="text-xs text-gray-400 font-mono">IPC-1782 Traceability Compliance Active</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col md:flex-row font-sans relative">
       
@@ -937,6 +1032,16 @@ export default function App() {
            <p className="text-[10px] text-gray-400 mt-2 font-mono truncate" title={user?.uid}>
              UID: {user?.uid || 'Connecting...'}
            </p>
+        </div>
+
+        {/* NEW: LOGOUT BUTTON */}
+        <div className="p-4 border-t border-gray-100">
+           <button 
+             onClick={handleLogout}
+             className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-red-50 hover:bg-red-100 text-red-600 rounded-lg transition-colors font-bold text-sm"
+           >
+             <LogOut size={16} /> Secure Logout
+           </button>
         </div>
       </nav>
 
