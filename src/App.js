@@ -770,7 +770,7 @@ export default function App() {
     });
 
     return (
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 relative flex flex-col h-[calc(100vh-120px)]">
+      <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 relative flex flex-col h-[calc(110vh-130px)]">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4 shrink-0">
           <h2 className="text-2xl font-bold text-gray-800">Global Traceability History</h2>
           
