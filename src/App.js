@@ -770,8 +770,8 @@ export default function App() {
     });
 
     return (
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 relative flex flex-col h-[calc(110vh-130px)]">
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4 shrink-0">
+      <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 relative">
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
           <h2 className="text-2xl font-bold text-gray-800">Global Traceability History</h2>
           
           <div className="flex flex-col md:flex-row gap-3 w-full md:w-auto">
@@ -807,18 +807,18 @@ export default function App() {
           </div>
         </div>
 
-        <div className="overflow-auto flex-1 border border-gray-100 rounded-lg">
-          <table className="w-full text-left text-sm relative">
-            <thead className="bg-gray-50 text-gray-600 border-b border-gray-200 sticky top-0 z-10 shadow-sm">
+        <div className="overflow-x-auto border border-gray-100 rounded-lg">
+          <table className="w-full text-left text-sm">
+            <thead className="bg-gray-50 text-gray-600 border-b border-gray-200">
               <tr>
-                <th className="p-3 bg-gray-50">Timestamp</th>
-                <th className="p-3 bg-gray-50">Serial Number</th>
-                <th className="p-3 bg-gray-50">Action</th>
-                <th className="p-3 bg-gray-50">From &rarr; To</th>
-                <th className="p-3 bg-gray-50">Defect Logged</th>
-                <th className="p-3 bg-gray-50">Location (Ref Des)</th>
-                <th className="p-3 bg-gray-50">User/Auth ID</th>
-                <th className="p-3 text-center bg-gray-50">Delete</th>
+                <th className="px-3 py-2 bg-gray-50">Timestamp</th>
+                <th className="px-3 py-2 bg-gray-50">Serial Number</th>
+                <th className="px-3 py-2 bg-gray-50">Action</th>
+                <th className="px-3 py-2 bg-gray-50">From &rarr; To</th>
+                <th className="px-3 py-2 bg-gray-50">Defect Logged</th>
+                <th className="px-3 py-2 bg-gray-50">Location (Ref Des)</th>
+                <th className="px-3 py-2 bg-gray-50">User/Auth ID</th>
+                <th className="px-3 py-2 text-center bg-gray-50">Delete</th>
               </tr>
             </thead>
             <tbody>
@@ -827,32 +827,32 @@ export default function App() {
               ) : (
                 filteredTx.map(tx => (
                   <tr key={tx.id} className="border-b border-gray-50 hover:bg-gray-50">
-                    <td className="p-3 text-gray-500 font-mono text-xs">{formatTimestamp(tx.timestamp)}</td>
-                    <td className="p-3 font-bold text-gray-800">{tx.sn}</td>
-                    <td className="p-3">
-                      <span className={`px-2 py-1 rounded-full text-xs font-semibold
+                    <td className="px-3 py-1.5 text-gray-500 font-mono text-xs">{formatTimestamp(tx.timestamp)}</td>
+                    <td className="px-3 py-1.5 font-bold text-gray-800">{tx.sn}</td>
+                    <td className="px-3 py-1.5">
+                      <span className={`px-2 py-0.5 rounded-full text-xs font-semibold
                         ${tx.action.includes('Defect') ? 'bg-red-100 text-red-700' : 
                           tx.action.includes('Passed') ? 'bg-green-100 text-green-700' : 'bg-orange-100 text-orange-700'}`}>
                         {tx.action}
                       </span>
                     </td>
-                    <td className="p-3 text-gray-600 flex items-center gap-1">
+                    <td className="px-3 py-1.5 text-gray-600 flex items-center gap-1">
                       {tx.from} <ArrowRight size={12}/> {tx.to}
                     </td>
-                    <td className="p-3">{tx.defect !== 'None' ? <span className="text-red-600 font-medium">{tx.defect}</span> : '-'}</td>
-                    <td className="p-3">
+                    <td className="px-3 py-1.5">{tx.defect !== 'None' ? <span className="text-red-600 font-medium">{tx.defect}</span> : '-'}</td>
+                    <td className="px-3 py-1.5">
                       {tx.location !== 'N/A' ? (
-                         <span className="font-mono bg-red-100 text-red-800 px-2 py-1 rounded text-xs border border-red-200">
+                         <span className="font-mono bg-red-100 text-red-800 px-2 py-0.5 rounded text-xs border border-red-200">
                            {tx.location}
                          </span>
                       ) : '-'}
                     </td>
-                    <td className="p-3 text-gray-600 font-mono text-xs" title={tx.user}>{tx.user.length > 15 ? tx.user.substring(0, 15) + '...' : tx.user}</td>
-                    <td className="p-3 text-center">
+                    <td className="px-3 py-1.5 text-gray-600 font-mono text-xs" title={tx.user}>{tx.user.length > 15 ? tx.user.substring(0, 15) + '...' : tx.user}</td>
+                    <td className="px-3 py-1.5 text-center">
                        {/* POKA-YOKE: Trigger verification modal instead of immediate deletion */}
                        <button 
                          onClick={() => setTxToDelete(tx)}
-                         className="p-2 bg-gray-100 hover:bg-red-100 text-gray-400 hover:text-red-600 rounded-lg transition-colors"
+                         className="p-1.5 bg-gray-100 hover:bg-red-100 text-gray-400 hover:text-red-600 rounded-lg transition-colors"
                          title="Delete Record"
                        >
                          <Trash2 size={16} />
