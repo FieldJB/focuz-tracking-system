@@ -1027,9 +1027,6 @@ export default function App() {
            >
              {ROLE_OPTIONS.map(role => <option key={role} value={role}>{role}</option>)}
            </select>
-           <p className="text-[10px] text-gray-400 mt-2 font-mono truncate" title={user?.uid}>
-             UID: {user?.uid || 'Connecting...'}
-           </p>
         </div>
 
         {/* NEW: LOGOUT BUTTON */}
