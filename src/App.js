@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { Activity, Barcode, LayoutDashboard, History, AlertTriangle, CheckCircle, ArrowRightLeft, ArrowRight, Factory, X, UploadCloud, FileSpreadsheet, Server, Trash2, LogOut, Lock } from 'lucide-react';
+import { Activity, Barcode, LayoutDashboard, History, AlertTriangle, CheckCircle, ArrowRightLeft, ArrowRight, Factory, X, UploadCloud, FileSpreadsheet, Server, Trash2, LogOut, Lock, Download } from 'lucide-react';
 
 // === FIREBASE CLOUD DATABASE IMPORTS ===
 import { initializeApp } from 'firebase/app';
@@ -769,17 +769,55 @@ export default function App() {
       return matchesSearch && matchesAction && matchesRoute;
     });
 
+    // === NEW: EXPORT TO CSV LOGIC ===
+    const handleExportCSV = () => {
+      if (filteredTx.length === 0) {
+        showToast("No data available to export.", "error");
+        return;
+      }
+      
+      // Standard headers for the Excel file
+      const headers = ["Timestamp", "Serial Number", "Action", "From", "To", "Defect Logged", "Location", "Operator ID"];
+      
+      // Map the filtered data to rows. We wrap values in quotes to prevent commas inside defect names from breaking the columns.
+      const rows = filteredTx.map(tx => [
+        `"${formatTimestamp(tx.timestamp)}"`,
+        `"${tx.sn}"`,
+        `"${tx.action}"`,
+        `"${tx.from}"`,
+        `"${tx.to}"`,
+        `"${tx.defect}"`,
+        `"${tx.location}"`,
+        `"${tx.user}"`
+      ]);
+
+      const csvString = [headers.join(","), ...rows.map(e => e.join(","))].join("\n");
+      const blob = new Blob([csvString], { type: 'text/csv;charset=utf-8;' });
+      
+      // Create a temporary link to trigger the browser download
+      const link = document.createElement("a");
+      const url = URL.createObjectURL(blob);
+      link.setAttribute("href", url);
+      link.setAttribute("download", `Focuz_Traceability_Log_${new Date().toISOString().slice(0,10)}.csv`);
+      link.style.visibility = 'hidden';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      
+      showToast("Data exported to Excel (CSV) successfully.");
+    };
+
     return (
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 relative">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
           <h2 className="text-2xl font-bold text-gray-800">Global Traceability History</h2>
           
-          <div className="flex flex-col md:flex-row gap-3 w-full md:w-auto">
+          <div className="flex flex-col md:flex-row gap-3 w-full md:w-auto items-center">
             {/* ACTION FILTER */}
             <select 
               value={filterAction}
               onChange={(e) => setFilterAction(e.target.value)}
-              className="p-2 border border-gray-200 rounded-lg text-sm focus:border-orange-500 outline-none bg-gray-50 font-medium text-gray-700"
+              className="p-2 border border-gray-200 rounded-lg text-sm focus:border-orange-500 outline-none bg-gray-50 font-medium text-gray-700 w-full md:w-auto"
               title="Filter by Action"
             >
               <option value="All">All Actions</option>
@@ -790,7 +828,7 @@ export default function App() {
             <select 
               value={filterRoute}
               onChange={(e) => setFilterRoute(e.target.value)}
-              className="p-2 border border-gray-200 rounded-lg text-sm focus:border-orange-500 outline-none bg-gray-50 font-medium text-gray-700"
+              className="p-2 border border-gray-200 rounded-lg text-sm focus:border-orange-500 outline-none bg-gray-50 font-medium text-gray-700 w-full md:w-auto"
               title="Filter by Route"
             >
               <option value="All">All Routes</option>
@@ -804,6 +842,15 @@ export default function App() {
               onChange={(e) => setSearchQuery(e.target.value)}
               className="p-2 border border-gray-200 rounded-lg w-full md:w-64 focus:border-orange-500 outline-none text-sm"
             />
+
+            {/* NEW: EXPORT BUTTON */}
+            <button 
+              onClick={handleExportCSV}
+              className="w-full md:w-auto p-2 bg-green-50 text-green-700 border border-green-200 rounded-lg text-sm font-bold flex items-center justify-center gap-2 hover:bg-green-100 transition-colors"
+              title="Export Current View to Excel (CSV)"
+            >
+              <Download size={16} /> Export
+            </button>
           </div>
         </div>
 
