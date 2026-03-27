@@ -386,7 +386,33 @@ export default function App() {
     try {
       const txDocRef = ref(db, `artifacts/${appId}/public/data/transactions/${txToDelete.id}`);
       await remove(txDocRef);
-      showToast(`Success: Transaction log deleted from Cloud.`);
+
+      // === NEW: RELATIONAL DATA INTEGRITY (ROLLBACK) ===
+      // Find all remaining transactions for this specific board
+      const remainingTx = transactions.filter(t => t.sn === txToDelete.sn && t.id !== txToDelete.id);
+      const boardDocRef = ref(db, `artifacts/${appId}/public/data/boards/${txToDelete.sn}`);
+
+      if (remainingTx.length === 0) {
+        // Condition A: If we deleted the very first scan, erase the board from the dashboard completely
+        await remove(boardDocRef);
+      } else {
+        // Condition B: If older scans exist, roll the board's status back to its previous state
+        const sortedRemaining = [...remainingTx].sort((a, b) => b.id - a.id);
+        const latestTx = sortedRemaining[0]; // The new "most recent" scan
+        
+        // Recalculate rework cycles
+        const reworkCount = sortedRemaining.filter(t => t.to === STAGES.REWORK).length;
+
+        const updatedBoard = {
+          sn: txToDelete.sn,
+          product: 'Prysm', 
+          currentStage: latestTx.to,
+          reworkCycles: reworkCount
+        };
+        await set(boardDocRef, updatedBoard);
+      }
+
+      showToast(`Success: Transaction log deleted and dashboard synchronized.`);
     } catch (err) {
       console.error(err);
       showToast("Database Error: Failed to delete record.", "error");
