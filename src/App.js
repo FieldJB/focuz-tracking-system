@@ -61,7 +61,8 @@ export default function App() {
   const [activeTab, setActiveTab] = useState('dashboard');
   const [showReworkModal, setShowReworkModal] = useState(false);
   const [toast, setToast] = useState(null); // Replaces browser alerts
-  const [txToDelete, setTxToDelete] = useState(null); // NEW: State for deletion modal
+  const [txToDelete, setTxToDelete] = useState(null); 
+  const [showDeleteAllModal, setShowDeleteAllModal] = useState(false); // NEW: State for mass deletion
 
   // === NEW: POKA-YOKE SECURITY GATE STATE ===
   const [isAppLocked, setIsAppLocked] = useState(() => {
@@ -380,14 +381,14 @@ export default function App() {
     }
   };
 
-  // === NEW: DELETE TRANSACTION LOGIC ===
+  // === SINGLE DELETE TRANSACTION LOGIC ===
   const confirmDeleteTransaction = async () => {
     if (!txToDelete) return;
     try {
       const txDocRef = ref(db, `artifacts/${appId}/public/data/transactions/${txToDelete.id}`);
       await remove(txDocRef);
 
-      // === NEW: RELATIONAL DATA INTEGRITY (ROLLBACK) ===
+      // === RELATIONAL DATA INTEGRITY (ROLLBACK) ===
       // Find all remaining transactions for this specific board
       const remainingTx = transactions.filter(t => t.sn === txToDelete.sn && t.id !== txToDelete.id);
       const boardDocRef = ref(db, `artifacts/${appId}/public/data/boards/${txToDelete.sn}`);
@@ -418,6 +419,26 @@ export default function App() {
       showToast("Database Error: Failed to delete record.", "error");
     } finally {
       setTxToDelete(null); // Close the modal
+    }
+  };
+
+  // === NEW: MASS DELETE LOGIC ===
+  const confirmDeleteAll = async () => {
+    try {
+      // POKA-YOKE: We must wipe both the Trace Log and the Dashboard (Boards) simultaneously
+      // to prevent "Orphan Data" and maintain strict Relational Data Integrity.
+      const txRef = ref(db, `artifacts/${appId}/public/data/transactions`);
+      const boardsRef = ref(db, `artifacts/${appId}/public/data/boards`);
+      
+      await remove(txRef);
+      await remove(boardsRef);
+      
+      showToast("Success: All data has been permanently erased from the Cloud.");
+    } catch (err) {
+      console.error(err);
+      showToast("Database Error: Failed to clear database.", "error");
+    } finally {
+      setShowDeleteAllModal(false);
     }
   };
 
@@ -795,17 +816,14 @@ export default function App() {
       return matchesSearch && matchesAction && matchesRoute;
     });
 
-    // === NEW: EXPORT TO CSV LOGIC ===
+    // === EXPORT TO CSV LOGIC ===
     const handleExportCSV = () => {
       if (filteredTx.length === 0) {
         showToast("No data available to export.", "error");
         return;
       }
       
-      // Standard headers for the Excel file
       const headers = ["Timestamp", "Serial Number", "Action", "From", "To", "Defect Logged", "Location", "Operator ID"];
-      
-      // Map the filtered data to rows. We wrap values in quotes to prevent commas inside defect names from breaking the columns.
       const rows = filteredTx.map(tx => [
         `"${formatTimestamp(tx.timestamp)}"`,
         `"${tx.sn}"`,
@@ -820,7 +838,6 @@ export default function App() {
       const csvString = [headers.join(","), ...rows.map(e => e.join(","))].join("\n");
       const blob = new Blob([csvString], { type: 'text/csv;charset=utf-8;' });
       
-      // Create a temporary link to trigger the browser download
       const link = document.createElement("a");
       const url = URL.createObjectURL(blob);
       link.setAttribute("href", url);
@@ -869,13 +886,22 @@ export default function App() {
               className="p-2 border border-gray-200 rounded-lg w-full md:w-64 focus:border-orange-500 outline-none text-sm"
             />
 
-            {/* NEW: EXPORT BUTTON */}
+            {/* EXPORT BUTTON */}
             <button 
               onClick={handleExportCSV}
               className="w-full md:w-auto p-2 bg-green-50 text-green-700 border border-green-200 rounded-lg text-sm font-bold flex items-center justify-center gap-2 hover:bg-green-100 transition-colors"
               title="Export Current View to Excel (CSV)"
             >
               <Download size={16} /> Export
+            </button>
+
+            {/* NEW: MASS DELETE BUTTON */}
+            <button 
+              onClick={() => setShowDeleteAllModal(true)}
+              className="w-full md:w-auto p-2 bg-red-50 text-red-700 border border-red-200 rounded-lg text-sm font-bold flex items-center justify-center gap-2 hover:bg-red-100 transition-colors"
+              title="Permanently Erase ALL Data"
+            >
+              <Trash2 size={16} /> Delete All
             </button>
           </div>
         </div>
@@ -951,7 +977,7 @@ export default function App() {
     );
   }
 
-  // === NEW: RENDER LOGIN SCREEN IF LOCKED ===
+  // === RENDER LOGIN SCREEN IF LOCKED ===
   if (isAppLocked) {
     return (
       <div className="min-h-screen bg-slate-900 flex items-center justify-center p-4 font-sans">
@@ -1019,7 +1045,7 @@ export default function App() {
         </div>
       )}
 
-      {/* DELETE CONFIRMATION MODAL (Poka-Yoke Gate) */}
+      {/* SINGLE DELETE CONFIRMATION MODAL (Poka-Yoke Gate) */}
       {txToDelete && (
         <div className="fixed inset-0 bg-slate-900/60 flex items-center justify-center z-[60] p-4 backdrop-blur-sm">
           <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden flex flex-col">
@@ -1050,6 +1076,42 @@ export default function App() {
                   className="flex-1 py-3 bg-red-600 hover:bg-red-700 text-white font-bold rounded-xl shadow-lg shadow-red-200 transition-colors flex items-center justify-center gap-2"
                 >
                   <Trash2 size={18} /> Delete Record
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* NEW: MASS DELETE ALL CONFIRMATION MODAL (Strict Poka-Yoke) */}
+      {showDeleteAllModal && (
+        <div className="fixed inset-0 bg-slate-900/80 flex items-center justify-center z-[70] p-4 backdrop-blur-md">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden flex flex-col border-4 border-red-500">
+            <div className="p-6 text-center">
+              <div className="mx-auto w-20 h-20 bg-red-100 text-red-600 rounded-full flex items-center justify-center mb-4 border-4 border-red-200">
+                <AlertTriangle size={40} />
+              </div>
+              <h3 className="text-3xl font-black text-gray-900 mb-2 uppercase">Critical Warning</h3>
+              <p className="text-red-600 text-sm mb-6 font-bold px-4">
+                You are about to permanently delete <span className="underline">ALL</span> Traceability Logs and Dashboard metrics.
+              </p>
+              
+              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 text-left text-xs text-yellow-800 font-mono mb-6">
+                <p><strong>IPC-1782 Impact:</strong> This action cannot be undone. If this is live production data from the SMT lines, erasing it violates Focuz traceability compliance.</p>
+              </div>
+
+              <div className="flex flex-col gap-3">
+                <button 
+                  onClick={confirmDeleteAll}
+                  className="w-full py-4 bg-red-600 hover:bg-red-700 text-white font-black rounded-xl shadow-lg shadow-red-200 transition-colors flex items-center justify-center gap-2 uppercase tracking-wide"
+                >
+                  <Trash2 size={20} /> I Understand, Erase All Data
+                </button>
+                <button 
+                  onClick={() => setShowDeleteAllModal(false)}
+                  className="w-full py-3 bg-gray-100 hover:bg-gray-200 text-gray-800 font-bold rounded-xl transition-colors"
+                >
+                  Cancel / Return to Safety
                 </button>
               </div>
             </div>
@@ -1102,7 +1164,7 @@ export default function App() {
            </select>
         </div>
 
-        {/* NEW: LOGOUT BUTTON */}
+        {/* LOGOUT BUTTON */}
         <div className="p-4 border-t border-gray-100">
            <button 
              onClick={handleLogout}
