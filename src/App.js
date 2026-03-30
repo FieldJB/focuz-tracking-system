@@ -1095,10 +1095,6 @@ export default function App() {
               <p className="text-red-600 text-sm mb-6 font-bold px-4">
                 You are about to permanently delete <span className="underline">ALL</span> Traceability Logs and Dashboard metrics.
               </p>
-              
-              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 text-left text-xs text-yellow-800 font-mono mb-6">
-                <p><strong>IPC-1782 Impact:</strong> This action cannot be undone. If this is live production data from the SMT lines, erasing it violates Focuz traceability compliance.</p>
-              </div>
 
               <div className="flex flex-col gap-3">
                 <button 
@@ -1111,7 +1107,7 @@ export default function App() {
                   onClick={() => setShowDeleteAllModal(false)}
                   className="w-full py-3 bg-gray-100 hover:bg-gray-200 text-gray-800 font-bold rounded-xl transition-colors"
                 >
-                  Cancel / Return to Safety
+                  Cancel / Return
                 </button>
               </div>
             </div>
