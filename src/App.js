@@ -606,7 +606,7 @@ export default function App() {
                   <tr>
                     <th className="p-3">Serial Number</th>
                     <th className="p-3">Defect Reason</th>
-                    <th className="p-3">Location (Ref Des)</th>
+                    <th className="p-3">Location</th>
                     <th className="p-3">Date Quarantined</th>
                     <th className="p-3">Cycle Count</th>
                   </tr>
@@ -734,7 +734,7 @@ export default function App() {
               {scanAction === 'Return for Rework' && (
                 <div className="pt-2">
                    <label className="block text-sm font-semibold text-gray-700 mb-1 flex items-center justify-between">
-                     <span>Defect Location (Ref Des)</span>
+                     <span>Defect Location</span>
                      <span className="text-xs font-normal text-gray-400">e.g., U2, R31, J2</span>
                    </label>
                    <input 
@@ -995,8 +995,8 @@ export default function App() {
                 <th className="px-3 py-2 bg-gray-50">Action</th>
                 <th className="px-3 py-2 bg-gray-50">From &rarr; To</th>
                 <th className="px-3 py-2 bg-gray-50">Defect Logged</th>
-                <th className="px-3 py-2 bg-gray-50">Location (Ref Des)</th>
-                <th className="px-3 py-2 bg-gray-50">User/Auth ID</th>
+                <th className="px-3 py-2 bg-gray-50">Location</th>
+                <th className="px-3 py-2 bg-gray-50">User</th>
                 <th className="px-3 py-2 text-center bg-gray-50">Delete</th>
               </tr>
             </thead>
