@@ -891,11 +891,9 @@ export default function App() {
       // Sub-header & Report Metadata
       doc.setFontSize(12);
       doc.setTextColor(71, 85, 105); // Slate 600
-      doc.text("IPC-1782 Traceability Audit Report", 14, 28);
       
       doc.setFontSize(10);
       doc.text(`Generated: ${new Date().toLocaleString()}`, 14, 34);
-      doc.text(`Filters Applied - Action: ${filterAction} | Route: ${filterRoute}`, 14, 40);
 
       // Format Data for the AutoTable Plugin
       const tableData = filteredTx.map(tx => [
@@ -956,7 +954,7 @@ export default function App() {
               placeholder="Search SN, Operator, or Loc..." 
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="p-2 border border-gray-200 rounded-lg w-full md:w-64 focus:border-orange-500 outline-none text-sm"
+              className="p-2 border border-gray-200 rounded-lg w-full md:w-52 focus:border-orange-500 outline-none text-sm"
             />
 
             {/* ACTION BUTTONS: Export & Delete */}
