@@ -128,12 +128,12 @@ export default function App() {
       setIsAppLocked(false);
       setLoginError('');
       localStorage.setItem('focuz_mes_auth', 'true');
-      setOperatorRole('SMT-Operator'); // Poka-Yoke: Auto-assign role to prevent mismatch
+      setOperatorRole('SMT-Engineer'); // Poka-Yoke: Auto-assign role to prevent mismatch
     } else if (userLower === 'prysm' && loginPass === 'prysm') {
       setIsAppLocked(false);
       setLoginError('');
       localStorage.setItem('focuz_mes_auth', 'true');
-      setOperatorRole('PRYSM-Tester'); // Poka-Yoke: Auto-assign role to prevent mismatch
+      setOperatorRole('PRYSM-Engineer'); // Poka-Yoke: Auto-assign role to prevent mismatch
     } else {
       setLoginError('Unauthorized: Invalid Station Credentials');
     }
@@ -980,40 +980,53 @@ export default function App() {
   // === RENDER LOGIN SCREEN IF LOCKED ===
   if (isAppLocked) {
     return (
-      <div className="min-h-screen bg-slate-900 flex items-center justify-center p-4 font-sans">
-        <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden flex flex-col">
-          <div className="p-8 bg-orange-600 flex flex-col items-center justify-center text-white">
-            <Lock size={48} className="mb-4 opacity-90" />
-            <h1 className="text-2xl font-black tracking-tight">Focuz Login</h1>
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4 font-sans relative z-0">
+        
+        {/* Decorative Background Element (Replaces the empty void) */}
+        <div className="absolute top-0 left-0 w-full h-96 bg-orange-600 transform -skew-y-2 origin-top-left -z-10 shadow-lg"></div>
+
+        <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden flex flex-col border border-gray-100 z-10">
+          
+          {/* Redesigned Clean White Header with Official Focuz Logo */}
+          <div className="p-8 border-b border-gray-100 flex flex-col items-start bg-white">
+            <svg viewBox="0 0 280 60" className="h-12 w-auto mb-4" xmlns="http://www.w3.org/2000/svg">
+              <polygon points="0,60 15,0 35,0 20,60" fill="#e04616" />
+              <text x="45" y="40" fontFamily="Georgia, serif" fontStyle="italic" fontWeight="bold" fontSize="42" fill="#e04616">Focuz</text>
+              <text x="50" y="55" fontFamily="Arial, sans-serif" fontWeight="bold" fontSize="11" fill="#475569" letterSpacing="1">MANUFACTURING SERVICES</text>
+            </svg>
+            <h1 className="text-xl font-black tracking-tight text-slate-800">Secure MES Portal</h1>
+            <p className="text-orange-600 text-xs font-bold uppercase tracking-wider mt-1 flex items-center gap-1">
+              <Lock size={12} /> Authorized Access Only
+            </p>
           </div>
           
-          <form onSubmit={handleLogin} className="p-8 space-y-6">
+          <form onSubmit={handleLogin} className="p-8 space-y-6 bg-slate-50/50">
             {loginError && (
-              <div className="bg-red-50 text-red-600 p-3 rounded-lg text-sm font-bold flex items-center gap-2">
+              <div className="bg-red-50 text-red-600 p-3 rounded-lg text-sm font-bold flex items-center gap-2 border border-red-100">
                 <AlertTriangle size={16} />
                 {loginError}
               </div>
             )}
             
             <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-1">Username</label>
+              <label className="block text-sm font-semibold text-gray-700 mb-1">Station ID / Username</label>
               <input 
                 type="text" 
                 value={loginUser}
                 onChange={(e) => setLoginUser(e.target.value)}
-                className="w-full p-3 border-2 border-gray-200 rounded-xl focus:border-orange-500 outline-none transition-colors"
-                placeholder="Username"
+                className="w-full p-3 pl-4 border-2 border-gray-200 rounded-xl focus:border-orange-500 focus:ring-4 focus:ring-orange-100 outline-none transition-all"
+                placeholder="e.g., smt or prysm"
                 required
               />
             </div>
             
             <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-1">Password</label>
+              <label className="block text-sm font-semibold text-gray-700 mb-1">Passcode</label>
               <input 
                 type="password" 
                 value={loginPass}
                 onChange={(e) => setLoginPass(e.target.value)}
-                className="w-full p-3 border-2 border-gray-200 rounded-xl focus:border-orange-500 outline-none transition-colors"
+                className="w-full p-3 pl-4 border-2 border-gray-200 rounded-xl focus:border-orange-500 focus:ring-4 focus:ring-orange-100 outline-none transition-all"
                 placeholder="••••••"
                 required
               />
@@ -1021,13 +1034,15 @@ export default function App() {
             
             <button 
               type="submit"
-              className="w-full py-4 bg-orange-600 hover:bg-orange-700 text-white rounded-xl font-bold text-lg shadow-lg shadow-orange-200 transition-all"
+              className="w-full py-4 bg-orange-600 hover:bg-orange-700 text-white rounded-xl font-bold text-lg shadow-lg shadow-orange-200 transition-all flex justify-center items-center gap-2"
             >
-              Access Dashboard
+              Access Dashboard <ArrowRight size={20} />
             </button>
           </form>
           
-          <div className="p-4 bg-gray-50 text-center border-t border-gray-100">
+          <div className="p-4 bg-gray-50 text-center border-t border-gray-100 flex justify-between items-center px-8">
+             <span className="text-xs text-gray-400 font-medium">IPC-1782 Compliant</span>
+             <span className="text-xs text-gray-400 font-medium">v1.2.0</span>
           </div>
         </div>
       </div>
