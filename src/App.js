@@ -924,7 +924,7 @@ export default function App() {
     return (
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 relative">
         <div className="flex flex-col xl:flex-row justify-between items-start xl:items-center mb-6 gap-4">
-          <h2 className="text-2xl font-bold text-gray-800 shrink-0">Traceability History</h2>
+          <h2 className="text-2xl font-bold text-gray-800 shrink-0">Traceability</h2>
           
           <div className="flex flex-col md:flex-row gap-3 w-full xl:w-auto items-center flex-wrap xl:flex-nowrap">
             {/* ACTION FILTER */}
@@ -969,7 +969,7 @@ export default function App() {
               
               <button 
                 onClick={handleExportPDF}
-                className="flex-1 md:flex-none p-2 bg-blue-50 text-blue-700 border border-blue-200 rounded-lg text-sm font-bold flex items-center justify-center gap-2 hover:bg-blue-100 transition-colors"
+                className="flex-1 md:flex-none p-2 bg-red-50 text-red-700 border border-red-200 rounded-lg text-sm font-bold flex items-center justify-center gap-2 hover:bg-blue-100 transition-colors"
                 title="Generate Audit Report (PDF)"
               >
                 <FileText size={16} /> PDF
@@ -977,7 +977,7 @@ export default function App() {
 
               <button 
                 onClick={() => setShowDeleteAllModal(true)}
-                className="flex-1 md:flex-none p-2 bg-red-50 text-red-700 border border-red-200 rounded-lg text-sm font-bold flex items-center justify-center gap-2 hover:bg-red-100 transition-colors"
+                className="flex-1 md:flex-none p-2 bg-gray-50 text-gray-700 border border-gray-200 rounded-lg text-sm font-bold flex items-center justify-center gap-2 hover:bg-red-100 transition-colors"
                 title="Permanently Erase ALL Data"
               >
                 <Trash2 size={16} /> All
