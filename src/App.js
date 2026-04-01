@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { Activity, Barcode, LayoutDashboard, History, AlertTriangle, CheckCircle, ArrowRightLeft, ArrowRight, Factory, X, UploadCloud, FileSpreadsheet, Server, Trash2, LogOut, Lock, Download } from 'lucide-react';
+import { Activity, Barcode, LayoutDashboard, History, AlertTriangle, CheckCircle, ArrowRightLeft, ArrowRight, Factory, X, UploadCloud, FileSpreadsheet, Server, Trash2, LogOut, Lock, Download, FileText } from 'lucide-react';
 
 // === FIREBASE CLOUD DATABASE IMPORTS ===
 import { initializeApp } from 'firebase/app';
@@ -39,15 +39,32 @@ export default function App() {
 
   useEffect(() => {
     // Fail-Safe: Inject Tailwind CSS via CDN if it's missing in this specific environment
-    if (document.getElementById("tailwind-cdn")) {
+    if (!document.getElementById("tailwind-cdn")) {
+      const script = document.createElement("script");
+      script.id = "tailwind-cdn";
+      script.src = "https://cdn.tailwindcss.com";
+      script.onload = () => setTailwindLoaded(true);
+      document.head.appendChild(script);
+    } else {
       setTailwindLoaded(true);
-      return;
     }
-    const script = document.createElement("script");
-    script.id = "tailwind-cdn";
-    script.src = "https://cdn.tailwindcss.com";
-    script.onload = () => setTailwindLoaded(true);
-    document.head.appendChild(script);
+
+    // POKA-YOKE: Load PDF Generation Libraries dynamically for the Canvas environment
+    if (!document.getElementById("jspdf-script")) {
+      const jspdfScript = document.createElement("script");
+      jspdfScript.id = "jspdf-script";
+      jspdfScript.src = "https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js";
+      document.head.appendChild(jspdfScript);
+
+      jspdfScript.onload = () => {
+        if (!document.getElementById("autotable-script")) {
+          const autoTableScript = document.createElement("script");
+          autoTableScript.id = "autotable-script";
+          autoTableScript.src = "https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js";
+          document.head.appendChild(autoTableScript);
+        }
+      };
+    }
   }, []);
 
   // Cloud State
@@ -850,12 +867,68 @@ export default function App() {
       showToast("Data exported to Excel (CSV) successfully.");
     };
 
+    // === NEW: EXPORT TO PDF LOGIC ===
+    const handleExportPDF = () => {
+      if (filteredTx.length === 0) {
+        showToast("No data available to export.", "error");
+        return;
+      }
+      
+      // Check if the dynamic scripts have finished loading
+      if (!window.jspdf || !window.jspdf.jsPDF) {
+        showToast("PDF Engine is still loading. Please try again in a few seconds.", "error");
+        return;
+      }
+
+      const { jsPDF } = window.jspdf;
+      const doc = new jsPDF();
+
+      // Focuz Branding Header
+      doc.setFontSize(18);
+      doc.setTextColor(224, 70, 22); // Focuz Orange
+      doc.text("Focuz Manufacturing Services", 14, 20);
+      
+      // Sub-header & Report Metadata
+      doc.setFontSize(12);
+      doc.setTextColor(71, 85, 105); // Slate 600
+      doc.text("IPC-1782 Traceability Audit Report", 14, 28);
+      
+      doc.setFontSize(10);
+      doc.text(`Generated: ${new Date().toLocaleString()}`, 14, 34);
+      doc.text(`Filters Applied - Action: ${filterAction} | Route: ${filterRoute}`, 14, 40);
+
+      // Format Data for the AutoTable Plugin
+      const tableData = filteredTx.map(tx => [
+        formatTimestamp(tx.timestamp),
+        tx.sn,
+        tx.action,
+        `${tx.from} -> ${tx.to}`,
+        tx.defect !== 'None' ? tx.defect : '-',
+        tx.location !== 'N/A' ? tx.location : '-',
+        tx.user
+      ]);
+
+      // Generate the stylized table
+      doc.autoTable({
+        head: [['Time', 'Serial Number', 'Action', 'Route', 'Defect', 'Loc', 'Operator ID']],
+        body: tableData,
+        startY: 45,
+        styles: { fontSize: 8, cellPadding: 2 },
+        headStyles: { fillColor: [224, 70, 22], textColor: 255, fontStyle: 'bold' },
+        alternateRowStyles: { fillColor: [248, 250, 252] },
+        margin: { top: 45 }
+      });
+
+      doc.save(`Focuz_Traceability_Report_${new Date().toISOString().slice(0,10)}.pdf`);
+      showToast("Traceability Report (PDF) generated successfully.");
+    };
+
     return (
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 relative">
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
-          <h2 className="text-2xl font-bold text-gray-800">Traceability History</h2>
+        <div className="flex flex-col xl:flex-row justify-between items-start xl:items-center mb-6 gap-4">
+          <h2 className="text-2xl font-bold text-gray-800 shrink-0">Traceability History</h2>
           
-          <div className="flex flex-col md:flex-row gap-3 w-full md:w-auto items-center">
+          <div className="flex flex-col md:flex-row gap-3 w-full xl:w-auto items-center flex-wrap xl:flex-nowrap">
             {/* ACTION FILTER */}
             <select 
               value={filterAction}
@@ -886,23 +959,32 @@ export default function App() {
               className="p-2 border border-gray-200 rounded-lg w-full md:w-64 focus:border-orange-500 outline-none text-sm"
             />
 
-            {/* EXPORT BUTTON */}
-            <button 
-              onClick={handleExportCSV}
-              className="w-full md:w-auto p-2 bg-green-50 text-green-700 border border-green-200 rounded-lg text-sm font-bold flex items-center justify-center gap-2 hover:bg-green-100 transition-colors"
-              title="Export Current View to Excel (CSV)"
-            >
-              <Download size={16} /> Export
-            </button>
+            {/* ACTION BUTTONS: Export & Delete */}
+            <div className="flex gap-2 w-full md:w-auto mt-2 md:mt-0">
+              <button 
+                onClick={handleExportCSV}
+                className="flex-1 md:flex-none p-2 bg-green-50 text-green-700 border border-green-200 rounded-lg text-sm font-bold flex items-center justify-center gap-2 hover:bg-green-100 transition-colors"
+                title="Export Data to Excel (CSV)"
+              >
+                <FileSpreadsheet size={16} /> CSV
+              </button>
+              
+              <button 
+                onClick={handleExportPDF}
+                className="flex-1 md:flex-none p-2 bg-blue-50 text-blue-700 border border-blue-200 rounded-lg text-sm font-bold flex items-center justify-center gap-2 hover:bg-blue-100 transition-colors"
+                title="Generate Audit Report (PDF)"
+              >
+                <FileText size={16} /> PDF
+              </button>
 
-            {/* NEW: MASS DELETE BUTTON */}
-            <button 
-              onClick={() => setShowDeleteAllModal(true)}
-              className="w-full md:w-auto p-2 bg-red-50 text-red-700 border border-red-200 rounded-lg text-sm font-bold flex items-center justify-center gap-2 hover:bg-red-100 transition-colors"
-              title="Permanently Erase ALL Data"
-            >
-              <Trash2 size={16} /> All
-            </button>
+              <button 
+                onClick={() => setShowDeleteAllModal(true)}
+                className="flex-1 md:flex-none p-2 bg-red-50 text-red-700 border border-red-200 rounded-lg text-sm font-bold flex items-center justify-center gap-2 hover:bg-red-100 transition-colors"
+                title="Permanently Erase ALL Data"
+              >
+                <Trash2 size={16} /> All
+              </button>
+            </div>
           </div>
         </div>
 
@@ -994,6 +1076,7 @@ export default function App() {
               <text x="45" y="40" fontFamily="Georgia, serif" fontStyle="italic" fontWeight="bold" fontSize="42" fill="#e04616">Focuz</text>
               <text x="50" y="55" fontFamily="Arial, sans-serif" fontWeight="bold" fontSize="11" fill="#475569" letterSpacing="1">MANUFACTURING SERVICES</text>
             </svg>
+            <h1 className="text-xl font-black tracking-tight text-slate-800">Secure MES Portal</h1>
             <p className="text-orange-600 text-xs font-bold uppercase tracking-wider mt-1 flex items-center gap-1">
               <Lock size={12} /> Authorized Access Only
             </p>
@@ -1008,13 +1091,13 @@ export default function App() {
             )}
             
             <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-1">Username</label>
+              <label className="block text-sm font-semibold text-gray-700 mb-1">Station ID / Username</label>
               <input 
                 type="text" 
                 value={loginUser}
                 onChange={(e) => setLoginUser(e.target.value)}
                 className="w-full p-3 pl-4 border-2 border-gray-200 rounded-xl focus:border-orange-500 focus:ring-4 focus:ring-orange-100 outline-none transition-all"
-                placeholder="Username"
+                placeholder="e.g., smt or prysm"
                 required
               />
             </div>
@@ -1038,6 +1121,11 @@ export default function App() {
               Access Dashboard <ArrowRight size={20} />
             </button>
           </form>
+          
+          <div className="p-4 bg-gray-50 text-center border-t border-gray-100 flex justify-between items-center px-8">
+             <span className="text-xs text-gray-400 font-medium">IPC-1782 Compliant</span>
+             <span className="text-xs text-gray-400 font-medium">v1.2.0</span>
+          </div>
         </div>
       </div>
     );
