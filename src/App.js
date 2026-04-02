@@ -1096,7 +1096,6 @@ export default function App() {
               <text x="45" y="40" fontFamily="Georgia, serif" fontStyle="italic" fontWeight="bold" fontSize="42" fill="#e04616">Focuz</text>
               <text x="50" y="55" fontFamily="Arial, sans-serif" fontWeight="bold" fontSize="11" fill="#475569" letterSpacing="1">MANUFACTURING SERVICES</text>
             </svg>
-            <h1 className="text-xl font-black tracking-tight text-slate-800">Secure MES Portal</h1>
             <p className="text-orange-600 text-xs font-bold uppercase tracking-wider mt-1 flex items-center gap-1">
               <Lock size={12} /> Authorized Access Only
             </p>
@@ -1111,19 +1110,19 @@ export default function App() {
             )}
             
             <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-1">Station ID / Username</label>
+              <label className="block text-sm font-semibold text-gray-700 mb-1">Username</label>
               <input 
                 type="text" 
                 value={loginUser}
                 onChange={(e) => setLoginUser(e.target.value)}
                 className="w-full p-3 pl-4 border-2 border-gray-200 rounded-xl focus:border-orange-500 focus:ring-4 focus:ring-orange-100 outline-none transition-all"
-                placeholder="e.g., smt or prysm"
+                placeholder="Username"
                 required
               />
             </div>
             
             <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-1">Passcode</label>
+              <label className="block text-sm font-semibold text-gray-700 mb-1">Password</label>
               <input 
                 type="password" 
                 value={loginPass}
@@ -1141,11 +1140,6 @@ export default function App() {
               Access Dashboard <ArrowRight size={20} />
             </button>
           </form>
-          
-          <div className="p-4 bg-gray-50 text-center border-t border-gray-100 flex justify-between items-center px-8">
-             <span className="text-xs text-gray-400 font-medium">IPC-1782 Compliant</span>
-             <span className="text-xs text-gray-400 font-medium">v1.2.0</span>
-          </div>
         </div>
       </div>
     );
