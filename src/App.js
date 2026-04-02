@@ -97,6 +97,8 @@ export default function App() {
   const [scanSn, setScanSn] = useState('');
   const [scanAction, setScanAction] = useState('Transfer to Prysm');
   const [scanDefects, setScanDefects] = useState([]); // UPDATED: Array for multiple defects
+  const [customDefect, setCustomDefect] = useState(''); // NEW: Manual input for unlisted defects
+  const [isDefectDropdownOpen, setIsDefectDropdownOpen] = useState(false); // NEW: Dropdown UI state
   const [scanLocation, setScanLocation] = useState('');
   const [uploadMode, setUploadMode] = useState('manual');
   const [bulkAction, setBulkAction] = useState('Transfer to Prysm');
@@ -377,8 +379,12 @@ export default function App() {
 
     board.currentStage = toStage;
 
-    // Convert array of selected defects into a single readable string (e.g., "Solder Bridge + Misalignment")
-    const defectString = scanDefects.length > 0 ? scanDefects.join(' + ') : 'None';
+    // Convert array of selected defects and custom defect into a single readable string
+    let finalDefects = [...scanDefects];
+    if (customDefect.trim() !== '') {
+      finalDefects.push(customDefect.trim());
+    }
+    const defectString = finalDefects.length > 0 ? finalDefects.join(' + ') : 'None';
 
     const txId = Date.now();
     const newTx = {
@@ -404,6 +410,8 @@ export default function App() {
       setScanSn('');
       setScanLocation('');
       setScanDefects([]); // Clear multi-select array after successful scan
+      setCustomDefect(''); // Clear custom input
+      setIsDefectDropdownOpen(false); // Close dropdown
       showToast(`Success: ${scanSn} routed to ${toStage}`);
     } catch (err) {
       console.error(err);
@@ -729,24 +737,55 @@ export default function App() {
 
                 {scanAction === 'Return for Rework' && (
                   <div className="space-y-4">
-                    <div>
+                    
+                    {/* CUSTOM MULTI-SELECT DROPDOWN */}
+                    <div className="relative">
                       <label className="block text-sm font-semibold text-gray-700 mb-1">Defect Reason(s)</label>
-                      <div className="flex flex-wrap gap-2">
-                        {DEFECT_CODES.filter(c => c !== 'None').map(c => (
-                          <button
-                            key={c}
-                            type="button"
-                            onClick={() => toggleDefect(c)}
-                            className={`px-3 py-2 rounded-lg text-sm font-bold border-2 transition-all ${
-                              scanDefects.includes(c) 
-                                ? 'bg-red-100 border-red-500 text-red-800 shadow-sm' 
-                                : 'bg-white border-gray-200 text-gray-600 hover:border-red-300'
-                            }`}
-                          >
-                            {c}
-                          </button>
-                        ))}
+                      <div 
+                        className="w-full p-3 border-2 border-red-200 rounded-xl bg-red-50 text-red-900 cursor-pointer flex justify-between items-center"
+                        onClick={() => setIsDefectDropdownOpen(!isDefectDropdownOpen)}
+                      >
+                        <span className="truncate pr-4 font-medium">
+                          {scanDefects.length > 0 ? scanDefects.join(', ') : 'Select Predefined Defects...'}
+                        </span>
+                        <ArrowRight size={16} className={`transform transition-transform ${isDefectDropdownOpen ? '-rotate-90' : 'rotate-90'}`} />
                       </div>
+
+                      {/* Dropdown Panel with Checkboxes */}
+                      {isDefectDropdownOpen && (
+                        <>
+                          {/* Invisible backdrop to close dropdown when clicking outside */}
+                          <div className="fixed inset-0 z-10" onClick={() => setIsDefectDropdownOpen(false)}></div>
+                          <div className="absolute z-20 w-full mt-1 bg-white border border-red-200 rounded-xl shadow-xl max-h-48 overflow-y-auto">
+                            {DEFECT_CODES.filter(c => c !== 'None').map(c => (
+                              <label key={c} className="flex items-center px-4 py-3 hover:bg-red-50 cursor-pointer border-b border-gray-100 last:border-0 transition-colors">
+                                <input 
+                                  type="checkbox" 
+                                  className="w-5 h-5 text-red-600 rounded border-gray-300 focus:ring-red-500 mr-3 cursor-pointer"
+                                  checked={scanDefects.includes(c)}
+                                  onChange={() => toggleDefect(c)}
+                                />
+                                <span className="text-sm font-bold text-gray-700">{c}</span>
+                              </label>
+                            ))}
+                          </div>
+                        </>
+                      )}
+                    </div>
+
+                    {/* CUSTOM DEFECT MANUAL INPUT */}
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 mb-1 flex items-center justify-between">
+                        <span>Custom Defect</span>
+                        <span className="text-xs font-normal text-gray-400">If not listed above</span>
+                      </label>
+                      <input 
+                        type="text" 
+                        value={customDefect}
+                        onChange={(e) => setCustomDefect(e.target.value)}
+                        placeholder="e.g., Scratched PCB Pad"
+                        className="w-full p-3 border-2 border-red-200 rounded-xl focus:border-red-500 outline-none bg-red-50 text-red-900 placeholder-red-300"
+                      />
                     </div>
                   </div>
                 )}
