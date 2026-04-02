@@ -75,6 +75,7 @@ export default function App() {
 
   // UI State
   const [searchQuery, setSearchQuery] = useState('');
+  const [dashboardSearch, setDashboardSearch] = useState(''); // NEW: Dashboard specific lot filter
   const [activeTab, setActiveTab] = useState('dashboard');
   const [showReworkModal, setShowReworkModal] = useState(false);
   const [toast, setToast] = useState(null); // Replaces browser alerts
@@ -230,23 +231,36 @@ export default function App() {
     };
   }, [user]);
 
-  // Computed Metrics
+  // === UPDATED: Dashboard Filter Logic ===
+  // Filter boards based on the Dashboard Search Input (Lot Number/SN)
+  const filteredBoards = useMemo(() => {
+    if (!dashboardSearch) return boards;
+    return boards.filter(b => b.sn.toLowerCase().includes(dashboardSearch.toLowerCase()));
+  }, [boards, dashboardSearch]);
+
+  const dashboardTransactions = useMemo(() => {
+    if (!dashboardSearch) return transactions;
+    return transactions.filter(tx => tx.sn.toLowerCase().includes(dashboardSearch.toLowerCase()));
+  }, [transactions, dashboardSearch]);
+
+  // Computed Metrics (Now uses filteredBoards)
   const metrics = useMemo(() => {
     return {
-      total: boards.length,
-      smt: boards.filter(b => b.currentStage === STAGES.SMT).length,
-      prysm: boards.filter(b => b.currentStage === STAGES.PRYSM).length,
-      rework: boards.filter(b => b.currentStage === STAGES.REWORK).length,
-      completed: boards.filter(b => b.currentStage === STAGES.COMPLETED).length,
-      highRework: [...boards].sort((a, b) => b.reworkCycles - a.reworkCycles).slice(0, 5)
+      total: filteredBoards.length,
+      smt: filteredBoards.filter(b => b.currentStage === STAGES.SMT).length,
+      prysm: filteredBoards.filter(b => b.currentStage === STAGES.PRYSM).length,
+      rework: filteredBoards.filter(b => b.currentStage === STAGES.REWORK).length,
+      completed: filteredBoards.filter(b => b.currentStage === STAGES.COMPLETED).length,
+      highRework: [...filteredBoards].sort((a, b) => (b.reworkCycles || 0) - (a.reworkCycles || 0)).slice(0, 5)
     };
-  }, [boards]);
+  }, [filteredBoards]);
 
-  // Detailed list of boards currently in rework
+  // Detailed list of boards currently in rework (Now uses filteredBoards)
   const activeReworkBoards = useMemo(() => {
-    return boards
+    return filteredBoards
       .filter(b => b.currentStage === STAGES.REWORK)
       .map(board => {
+        // We still search the full transactions list for the defect reason history
         const defectTx = [...transactions]
           .find(tx => tx.sn === board.sn && tx.to === STAGES.REWORK);
         
@@ -257,7 +271,7 @@ export default function App() {
           dateQuarantined: defectTx ? defectTx.timestamp : 'Unknown'
         };
       });
-  }, [boards, transactions]);
+  }, [filteredBoards, transactions]);
 
   // === MASS DATA INGESTION (CLOUD UPLOAD) ===
   const handleFileUpload = (e) => {
@@ -301,11 +315,11 @@ export default function App() {
 
         // === UPDATED: Added logic for "Process in SMT" bulk action ===
         if (bulkAction === 'Process in SMT') {
-          toStage = STAGES.SMT; actionLabel = 'Processed in SMT (Bulk)';
+          toStage = STAGES.SMT; actionLabel = 'Processed in SMT';
         } else if (bulkAction === 'Transfer to Prysm') {
           toStage = STAGES.PRYSM; actionLabel = 'Transferred';
         } else if (bulkAction === 'Return for Rework') {
-          toStage = STAGES.REWORK; actionLabel = 'Defect Found (Bulk)';
+          toStage = STAGES.REWORK; actionLabel = 'Defect Found';
           board.reworkCycles = (board.reworkCycles || 0) + 1;
           finalDefect = rawDefect;
           finalLocation = rawLocation;
@@ -488,11 +502,33 @@ export default function App() {
 
   const renderDashboard = () => (
     <div className="space-y-6 relative">
-      <div className="flex justify-between items-center">
-        <h2 className="text-2xl font-bold text-gray-800">Production Overview</h2>
-        <div className={`flex items-center gap-2 px-3 py-1 rounded-full text-xs font-bold ${isDbConnected ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
-          <Server size={14} />
-          {isDbConnected ? 'Cloud Sync Active' : 'Disconnected'}
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+        <h2 className="text-2xl font-bold text-gray-800 shrink-0">Production Overview</h2>
+        
+        {/* NEW: Dashboard Production Lot Filter */}
+        <div className="flex items-center gap-3 w-full md:w-auto">
+          <div className="relative w-full md:w-64">
+            <input 
+              type="text" 
+              placeholder="Filter by Lot or SN..." 
+              value={dashboardSearch}
+              onChange={(e) => setDashboardSearch(e.target.value)}
+              className="p-2 pl-3 border border-gray-200 rounded-lg w-full focus:border-orange-500 outline-none text-sm bg-white shadow-sm"
+              title="Filter Dashboard metrics by specific serial numbers or production lots"
+            />
+            {dashboardSearch && (
+              <button 
+                onClick={() => setDashboardSearch('')} 
+                className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+              >
+                <X size={14} />
+              </button>
+            )}
+          </div>
+          <div className={`flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-bold shrink-0 ${isDbConnected ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+            <Server size={14} />
+            {isDbConnected ? 'Cloud Sync Active' : 'Disconnected'}
+          </div>
         </div>
       </div>
       
@@ -539,10 +575,10 @@ export default function App() {
             <Activity size={20} className="text-blue-500"/> Live Cloud Movements
           </h3>
           <div className="space-y-3 overflow-y-auto flex-1 pr-2">
-            {transactions.length === 0 ? (
+            {dashboardTransactions.length === 0 ? (
               <div className="text-center text-gray-400 italic py-10">Awaiting initial scans...</div>
             ) : (
-              transactions.slice(0, 10).map(tx => (
+              dashboardTransactions.slice(0, 10).map(tx => (
                 <div key={tx.id} className="flex justify-between items-center p-3 bg-gray-50 rounded-lg text-sm">
                   <div>
                     <div className="font-bold text-gray-700">{tx.sn}</div>
@@ -550,7 +586,10 @@ export default function App() {
                   </div>
                   <div className="flex flex-col items-end">
                     <div className="flex items-center gap-2 text-gray-600 mb-1">
-                      <span className="bg-gray-200 px-2 py-1 rounded text-xs">{tx.from}</span>
+                      {/* POKA-YOKE: Visual text replacement to prevent "SMT to SMT" confusion */}
+                      <span className="bg-gray-200 px-2 py-1 rounded text-xs">
+                        {tx.from === 'SMT' && tx.to === 'SMT' ? 'Start' : tx.from}
+                      </span>
                       <ArrowRight size={14} />
                       <span className={`px-2 py-1 rounded text-xs font-semibold ${tx.to === STAGES.REWORK ? 'bg-red-100 text-red-800' : 'bg-blue-100 text-blue-800'}`}>{tx.to}</span>
                     </div>
