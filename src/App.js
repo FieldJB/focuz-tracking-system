@@ -95,13 +95,13 @@ export default function App() {
 
   // Form State
   const [scanSn, setScanSn] = useState('');
-  const [scanAction, setScanAction] = useState('Transfer to Prysm');
+  const [scanAction, setScanAction] = useState('Process in SMT'); // UPDATED: Default action to SMT
   const [scanDefects, setScanDefects] = useState([]); // UPDATED: Array for multiple defects
   const [customDefect, setCustomDefect] = useState(''); // NEW: Manual input for unlisted defects
   const [isDefectDropdownOpen, setIsDefectDropdownOpen] = useState(false); // NEW: Dropdown UI state
   const [scanLocation, setScanLocation] = useState('');
   const [uploadMode, setUploadMode] = useState('manual');
-  const [bulkAction, setBulkAction] = useState('Transfer to Prysm');
+  const [bulkAction, setBulkAction] = useState('Process in SMT'); // UPDATED: Default bulk action to SMT
 
   // === NEW: TOGGLE MULTIPLE DEFECTS HELPER ===
   const toggleDefect = (code) => {
@@ -299,7 +299,10 @@ export default function App() {
         let finalDefect = 'None';
         let finalLocation = 'N/A';
 
-        if (bulkAction === 'Transfer to Prysm') {
+        // === UPDATED: Added logic for "Process in SMT" bulk action ===
+        if (bulkAction === 'Process in SMT') {
+          toStage = STAGES.SMT; actionLabel = 'Processed in SMT (Bulk)';
+        } else if (bulkAction === 'Transfer to Prysm') {
           toStage = STAGES.PRYSM; actionLabel = 'Transferred';
         } else if (bulkAction === 'Return for Rework') {
           toStage = STAGES.REWORK; actionLabel = 'Defect Found (Bulk)';
@@ -366,7 +369,10 @@ export default function App() {
     let toStage = board.currentStage;
     let actionLabel = 'Scanned';
 
-    if (scanAction === 'Transfer to Prysm') {
+    // === UPDATED: Added logic for "Process in SMT" scanning action ===
+    if (scanAction === 'Process in SMT') {
+      toStage = STAGES.SMT; actionLabel = 'Processed in SMT';
+    } else if (scanAction === 'Transfer to Prysm') {
       toStage = STAGES.PRYSM; actionLabel = 'Transferred';
     } else if (scanAction === 'Return for Rework') {
       toStage = STAGES.REWORK; actionLabel = 'Defect Found';
@@ -659,6 +665,16 @@ export default function App() {
                 </tbody>
               </table>
             </div>
+
+            {/* Modal Footer */}
+            <div className="px-6 py-4 bg-gray-50 border-t border-gray-100 flex justify-end">
+              <button 
+                onClick={() => setShowReworkModal(false)}
+                className="px-6 py-2 bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold rounded-lg transition-colors"
+              >
+                Close Window
+              </button>
+            </div>
           </div>
         </div>
       )}
@@ -718,6 +734,7 @@ export default function App() {
                     onChange={(e) => setScanAction(e.target.value)}
                     className="w-full p-3 border-2 border-gray-200 rounded-xl focus:border-orange-500 outline-none bg-white"
                   >
+                    <option>Process in SMT</option>
                     <option>Transfer to Prysm</option>
                     <option>Return for Rework</option>
                     <option>Receive from Rework</option>
@@ -825,6 +842,7 @@ export default function App() {
                 onChange={(e) => setBulkAction(e.target.value)}
                 className="w-full p-3 border-2 border-blue-200 rounded-xl focus:border-blue-500 outline-none bg-blue-50 text-blue-900 font-bold"
               >
+                <option>Process in SMT</option>
                 <option>Transfer to Prysm</option>
                 <option>Return for Rework</option>
                 <option>Receive from Rework</option>
