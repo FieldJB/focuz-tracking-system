@@ -96,10 +96,19 @@ export default function App() {
   // Form State
   const [scanSn, setScanSn] = useState('');
   const [scanAction, setScanAction] = useState('Transfer to Prysm');
-  const [scanDefect, setScanDefect] = useState('None');
+  const [scanDefects, setScanDefects] = useState([]); // UPDATED: Array for multiple defects
   const [scanLocation, setScanLocation] = useState('');
   const [uploadMode, setUploadMode] = useState('manual');
   const [bulkAction, setBulkAction] = useState('Transfer to Prysm');
+
+  // === NEW: TOGGLE MULTIPLE DEFECTS HELPER ===
+  const toggleDefect = (code) => {
+    if (scanDefects.includes(code)) {
+      setScanDefects(scanDefects.filter(d => d !== code));
+    } else {
+      setScanDefects([...scanDefects, code]);
+    }
+  };
 
   // === NEW: HUMAN-READABLE ROLE IDENTIFICATION ===
   const [operatorRole, setOperatorRole] = useState(() => {
@@ -368,6 +377,9 @@ export default function App() {
 
     board.currentStage = toStage;
 
+    // Convert array of selected defects into a single readable string (e.g., "Solder Bridge + Misalignment")
+    const defectString = scanDefects.length > 0 ? scanDefects.join(' + ') : 'None';
+
     const txId = Date.now();
     const newTx = {
       id: txId,
@@ -377,7 +389,7 @@ export default function App() {
       to: toStage,
       action: actionLabel,
       user: operatorRole, 
-      defect: scanAction === 'Return for Rework' ? scanDefect : 'None',
+      defect: scanAction === 'Return for Rework' ? defectString : 'None',
       location: scanAction === 'Return for Rework' ? scanLocation || 'N/A' : 'N/A'
     };
 
@@ -391,6 +403,7 @@ export default function App() {
       
       setScanSn('');
       setScanLocation('');
+      setScanDefects([]); // Clear multi-select array after successful scan
       showToast(`Success: ${scanSn} routed to ${toStage}`);
     } catch (err) {
       console.error(err);
@@ -717,14 +730,23 @@ export default function App() {
                 {scanAction === 'Return for Rework' && (
                   <div className="space-y-4">
                     <div>
-                      <label className="block text-sm font-semibold text-gray-700 mb-1">Defect Reason</label>
-                      <select 
-                        value={scanDefect}
-                        onChange={(e) => setScanDefect(e.target.value)}
-                        className="w-full p-3 border-2 border-red-200 rounded-xl focus:border-red-500 outline-none bg-red-50 text-red-900"
-                      >
-                        {DEFECT_CODES.filter(c => c !== 'None').map(c => <option key={c}>{c}</option>)}
-                      </select>
+                      <label className="block text-sm font-semibold text-gray-700 mb-1">Defect Reason(s)</label>
+                      <div className="flex flex-wrap gap-2">
+                        {DEFECT_CODES.filter(c => c !== 'None').map(c => (
+                          <button
+                            key={c}
+                            type="button"
+                            onClick={() => toggleDefect(c)}
+                            className={`px-3 py-2 rounded-lg text-sm font-bold border-2 transition-all ${
+                              scanDefects.includes(c) 
+                                ? 'bg-red-100 border-red-500 text-red-800 shadow-sm' 
+                                : 'bg-white border-gray-200 text-gray-600 hover:border-red-300'
+                            }`}
+                          >
+                            {c}
+                          </button>
+                        ))}
+                      </div>
                     </div>
                   </div>
                 )}
