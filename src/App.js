@@ -1032,7 +1032,7 @@ export default function App() {
     return (
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 relative">
         <div className="flex flex-col xl:flex-row justify-between items-start xl:items-center mb-6 gap-4">
-          <h2 className="text-2xl font-bold text-gray-800 shrink-0">Traceability</h2>
+          <h2 className="text-2xl font-bold text-gray-800 shrink-0">History</h2>
           
           <div className="flex flex-col md:flex-row gap-3 w-full xl:w-auto items-center flex-wrap xl:flex-nowrap">
             {/* ACTION FILTER */}
