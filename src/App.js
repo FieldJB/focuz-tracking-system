@@ -11,16 +11,24 @@ import { getDatabase, ref, onValue, set, remove } from 'firebase/database';
 // POKA-YOKE: Handles both local Canvas testing and your future Vercel deployment
 const getFirebaseConfig = () => {
   if (typeof __firebase_config !== 'undefined') {
-    return JSON.parse(__firebase_config);
+    const config = JSON.parse(__firebase_config);
+    // Poka-Yoke fallback: Ensure databaseURL exists in Canvas environment
+    if (!config.databaseURL) {
+       config.databaseURL = "https://focuz-cloud-mes-default-rtdb.firebaseio.com";
+    }
+    return config;
   }
   return {
     apiKey: "AIzaSyDKXNIyKPoZ6wKM8BLerJNsC8iw_wclUHI",
-  authDomain: "focuz-cloud-mes.firebaseapp.com",
-  projectId: "focuz-cloud-mes",
-  storageBucket: "focuz-cloud-mes.firebasestorage.app",
-  messagingSenderId: "1082764054889",
-  appId: "1:1082764054889:web:00d10ea1382f3b7aaf6df8",
-  measurementId: "G-V65DL05WJ4"
+    authDomain: "focuz-cloud-mes.firebaseapp.com",
+    // === FIX: THE MISSING NETWORK CABLE ===
+    // This tells the dashboard exactly where your legacy database is located
+    databaseURL: "https://focuz-cloud-mes-default-rtdb.firebaseio.com", 
+    projectId: "focuz-cloud-mes",
+    storageBucket: "focuz-cloud-mes.firebasestorage.app",
+    messagingSenderId: "1082764054889",
+    appId: "1:1082764054889:web:00d10ea1382f3b7aaf6df8",
+    measurementId: "G-V65DL05WJ4"
   };
 };
 
@@ -315,11 +323,11 @@ export default function App() {
 
         // === UPDATED: Added logic for "Process in SMT" bulk action ===
         if (bulkAction === 'Process in SMT') {
-          toStage = STAGES.SMT; actionLabel = 'Processed in SMT';
+          toStage = STAGES.SMT; actionLabel = 'Processed in SMT (Bulk)';
         } else if (bulkAction === 'Transfer to Prysm') {
           toStage = STAGES.PRYSM; actionLabel = 'Transferred';
         } else if (bulkAction === 'Return for Rework') {
-          toStage = STAGES.REWORK; actionLabel = 'Defect Found';
+          toStage = STAGES.REWORK; actionLabel = 'Defect Found (Bulk)';
           board.reworkCycles = (board.reworkCycles || 0) + 1;
           finalDefect = rawDefect;
           finalLocation = rawLocation;
@@ -1032,7 +1040,7 @@ export default function App() {
     return (
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 relative">
         <div className="flex flex-col xl:flex-row justify-between items-start xl:items-center mb-6 gap-4">
-          <h2 className="text-2xl font-bold text-gray-800 shrink-0">History</h2>
+          <h2 className="text-2xl font-bold text-gray-800 shrink-0">Traceability</h2>
           
           <div className="flex flex-col md:flex-row gap-3 w-full xl:w-auto items-center flex-wrap xl:flex-nowrap">
             {/* ACTION FILTER */}
