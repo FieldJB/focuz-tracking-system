@@ -4,37 +4,32 @@ import { Activity, Barcode, LayoutDashboard, History, AlertTriangle, CheckCircle
 // === FIREBASE CLOUD DATABASE IMPORTS ===
 import { initializeApp } from 'firebase/app';
 import { getAuth, signInWithCustomToken, signInAnonymously, onAuthStateChanged } from 'firebase/auth';
-// POKA-YOKE: Swapped Firestore for Realtime Database imports. Added 'remove' for data deletion.
 import { getDatabase, ref, onValue, set, remove } from 'firebase/database';
 
 // === FIREBASE CONFIGURATION ===
-// POKA-YOKE: Handles both local Canvas testing and your future Vercel deployment
 const getFirebaseConfig = () => {
   if (typeof __firebase_config !== 'undefined') {
     const config = JSON.parse(__firebase_config);
     // Poka-Yoke fallback: Ensure databaseURL exists in Canvas environment
     if (!config.databaseURL) {
+       // ACTION REQUIRED: If this fails, replace this link with your exact Firebase URL
        config.databaseURL = "https://focuz-cloud-mes-default-rtdb.firebaseio.com";
     }
     return config;
   }
   return {
-    apiKey: "AIzaSyDKXNIyKPoZ6wKM8BLerJNsC8iw_wclUHI",
+    apiKey: "YOUR_API_KEY",
     authDomain: "focuz-cloud-mes.firebaseapp.com",
-    // === FIX: THE MISSING NETWORK CABLE ===
-    // This tells the dashboard exactly where your legacy database is located
     databaseURL: "https://focuz-cloud-mes-default-rtdb.firebaseio.com", 
     projectId: "focuz-cloud-mes",
     storageBucket: "focuz-cloud-mes.firebasestorage.app",
     messagingSenderId: "1082764054889",
-    appId: "1:1082764054889:web:00d10ea1382f3b7aaf6df8",
-    measurementId: "G-V65DL05WJ4"
+    appId: "YOUR_APP_ID"
   };
 };
 
 const app = initializeApp(getFirebaseConfig());
 const auth = getAuth(app);
-// Initialize Realtime Database instead of Firestore
 const db = getDatabase(app);
 const appId = typeof __app_id !== 'undefined' ? __app_id : 'focuz-mes-production';
 
@@ -42,11 +37,9 @@ const STAGES = { SMT: 'SMT', PRYSM: 'Prysm', REWORK: 'Rework', COMPLETED: 'Compl
 const DEFECT_CODES = ['None', 'Solder Bridge', 'Missing Component', 'Tombstoning', 'Shifted Component', 'Failed Functional Test', 'Part Damage', 'Misalignment', 'Non-Wetting', 'Wrong Part Insert'];
 
 export default function App() {
-  // === POKA-YOKE: DYNAMIC CSS LOADER FOR CANVAS ===
   const [tailwindLoaded, setTailwindLoaded] = useState(false);
 
   useEffect(() => {
-    // Fail-Safe: Inject Tailwind CSS via CDN if it's missing in this specific environment
     if (!document.getElementById("tailwind-cdn")) {
       const script = document.createElement("script");
       script.id = "tailwind-cdn";
@@ -57,7 +50,6 @@ export default function App() {
       setTailwindLoaded(true);
     }
 
-    // POKA-YOKE: Load PDF Generation Libraries dynamically for the Canvas environment
     if (!document.getElementById("jspdf-script")) {
       const jspdfScript = document.createElement("script");
       jspdfScript.id = "jspdf-script";
@@ -80,17 +72,18 @@ export default function App() {
   const [boards, setBoards] = useState([]);
   const [transactions, setTransactions] = useState([]);
   const [isDbConnected, setIsDbConnected] = useState(false);
+  const [connectionError, setConnectionError] = useState('Initializing Protocol...'); // NEW: Diagnostic Tracker
 
   // UI State
   const [searchQuery, setSearchQuery] = useState('');
-  const [dashboardSearch, setDashboardSearch] = useState(''); // NEW: Dashboard specific lot filter
+  const [dashboardSearch, setDashboardSearch] = useState(''); 
   const [activeTab, setActiveTab] = useState('dashboard');
   const [showReworkModal, setShowReworkModal] = useState(false);
-  const [toast, setToast] = useState(null); // Replaces browser alerts
+  const [toast, setToast] = useState(null); 
   const [txToDelete, setTxToDelete] = useState(null); 
-  const [showDeleteAllModal, setShowDeleteAllModal] = useState(false); // NEW: State for mass deletion
+  const [showDeleteAllModal, setShowDeleteAllModal] = useState(false); 
 
-  // === NEW: POKA-YOKE SECURITY GATE STATE ===
+  // POKA-YOKE SECURITY GATE STATE
   const [isAppLocked, setIsAppLocked] = useState(() => {
     return localStorage.getItem('focuz_mes_auth') !== 'true';
   });
@@ -98,21 +91,20 @@ export default function App() {
   const [loginPass, setLoginPass] = useState('');
   const [loginError, setLoginError] = useState('');
 
-  // === NEW: TRACEABILITY LOG FILTERS ===
+  // TRACEABILITY LOG FILTERS
   const [filterAction, setFilterAction] = useState('All');
   const [filterRoute, setFilterRoute] = useState('All');
 
   // Form State
   const [scanSn, setScanSn] = useState('');
-  const [scanAction, setScanAction] = useState('Process in SMT'); // UPDATED: Default action to SMT
-  const [scanDefects, setScanDefects] = useState([]); // UPDATED: Array for multiple defects
-  const [customDefect, setCustomDefect] = useState(''); // NEW: Manual input for unlisted defects
-  const [isDefectDropdownOpen, setIsDefectDropdownOpen] = useState(false); // NEW: Dropdown UI state
+  const [scanAction, setScanAction] = useState('Process in SMT'); 
+  const [scanDefects, setScanDefects] = useState([]); 
+  const [customDefect, setCustomDefect] = useState(''); 
+  const [isDefectDropdownOpen, setIsDefectDropdownOpen] = useState(false); 
   const [scanLocation, setScanLocation] = useState('');
   const [uploadMode, setUploadMode] = useState('manual');
-  const [bulkAction, setBulkAction] = useState('Process in SMT'); // UPDATED: Default bulk action to SMT
+  const [bulkAction, setBulkAction] = useState('Process in SMT'); 
 
-  // === NEW: TOGGLE MULTIPLE DEFECTS HELPER ===
   const toggleDefect = (code) => {
     if (scanDefects.includes(code)) {
       setScanDefects(scanDefects.filter(d => d !== code));
@@ -121,9 +113,7 @@ export default function App() {
     }
   };
 
-  // === NEW: HUMAN-READABLE ROLE IDENTIFICATION ===
   const [operatorRole, setOperatorRole] = useState(() => {
-    // Poka-Yoke: Remember the last selected role on this specific device
     return localStorage.getItem('focuz_operator_role') || 'SMT-Operator';
   });
 
@@ -133,18 +123,15 @@ export default function App() {
 
   const ROLE_OPTIONS = ['SMT-Operator', 'SMT-Engineer', 'PRYSM-Engineer', 'PRYSM-Tester'];
 
-  // Helper to show on-screen notifications instead of freezing the app with alert()
   const showToast = (message, type = 'success') => {
     setToast({ message, type });
     setTimeout(() => setToast(null), 5000);
   };
 
-  // === NEW: IPC-1782 STANDARDIZED TIMESTAMP FORMATTER ===
-  // Converts any localized browser time into a strict 24-hour format (DD/MM/YYYY HH:MM:SS)
   const formatTimestamp = (dateString) => {
     try {
       const d = new Date(dateString);
-      if (isNaN(d.getTime())) return dateString; // Fallback if invalid data exists
+      if (isNaN(d.getTime())) return dateString; 
       return d.toLocaleString('en-GB', { 
         year: 'numeric', month: '2-digit', day: '2-digit', 
         hour: '2-digit', minute: '2-digit', second: '2-digit', 
@@ -155,22 +142,20 @@ export default function App() {
     }
   };
 
-  // === SEPARATED LOGIN & LOGOUT LOGIC ===
   const handleLogin = (e) => {
     e.preventDefault();
     const userLower = loginUser.toLowerCase();
     
-    // Front-line security gate with separated credentials for SMT vs PRYSM
     if (userLower === 'smt' && loginPass === 'smt') {
       setIsAppLocked(false);
       setLoginError('');
       localStorage.setItem('focuz_mes_auth', 'true');
-      setOperatorRole('SMT-Engineer'); // Poka-Yoke: Auto-assign role to prevent mismatch
+      setOperatorRole('SMT-Engineer'); 
     } else if (userLower === 'prysm' && loginPass === 'prysm') {
       setIsAppLocked(false);
       setLoginError('');
       localStorage.setItem('focuz_mes_auth', 'true');
-      setOperatorRole('PRYSM-Engineer'); // Poka-Yoke: Auto-assign role to prevent mismatch
+      setOperatorRole('PRYSM-Engineer'); 
     } else {
       setLoginError('Unauthorized: Invalid Station Credentials');
     }
@@ -187,6 +172,7 @@ export default function App() {
   useEffect(() => {
     const initAuth = async () => {
       try {
+        setConnectionError('Authenticating Badge...');
         if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
           await signInWithCustomToken(auth, __initial_auth_token);
         } else {
@@ -194,53 +180,57 @@ export default function App() {
         }
       } catch (err) {
         console.error("Authentication Failed:", err);
+        setConnectionError(`Auth Err: ${err.code || err.message}`);
       }
     };
     initAuth();
     
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
       setUser(currentUser);
+      if (!currentUser) {
+         setConnectionError('No Authorized User Found');
+      } else {
+         setConnectionError('Connecting to Main Server...');
+      }
     });
     return () => unsubscribe();
   }, []);
 
   // === REAL-TIME DATA SYNCHRONIZATION (IPC-1782 COMPLIANT) ===
   useEffect(() => {
-    if (!user) return; // Guard clause: Stop if not authenticated
+    if (!user) return; 
 
-    // 1. Subscribe to the Master Board Roster (Realtime DB Format)
     const boardsRef = ref(db, `artifacts/${appId}/public/data/boards`);
     const unsubBoards = onValue(boardsRef, (snapshot) => {
       const data = snapshot.val();
       const activeBoards = data ? Object.values(data) : [];
       setBoards(activeBoards);
       setIsDbConnected(true);
+      setConnectionError(''); // Clear errors on success
     }, (error) => {
       console.error("Database connection lost (Boards):", error);
       setIsDbConnected(false);
+      setConnectionError(`DB Err: ${error.code || error.message}`); // Display exact error
     });
 
-    // 2. Subscribe to the Traceability Ledger (Realtime DB Format)
     const txRef = ref(db, `artifacts/${appId}/public/data/transactions`);
     const unsubTx = onValue(txRef, (snapshot) => {
       const data = snapshot.val();
       const txHistory = data ? Object.values(data) : [];
-      // Sort newest to oldest
       txHistory.sort((a, b) => b.id - a.id);
       setTransactions(txHistory);
     }, (error) => {
       console.error("Database connection lost (Transactions):", error);
+      setIsDbConnected(false);
+      setConnectionError(`DB Err: ${error.code || error.message}`); // Display exact error
     });
 
     return () => {
-      // Unsubscribe listeners for Realtime DB
       unsubBoards();
       unsubTx();
     };
   }, [user]);
 
-  // === UPDATED: Dashboard Filter Logic ===
-  // Filter boards based on the Dashboard Search Input (Lot Number/SN)
   const filteredBoards = useMemo(() => {
     if (!dashboardSearch) return boards;
     return boards.filter(b => b.sn.toLowerCase().includes(dashboardSearch.toLowerCase()));
@@ -251,7 +241,6 @@ export default function App() {
     return transactions.filter(tx => tx.sn.toLowerCase().includes(dashboardSearch.toLowerCase()));
   }, [transactions, dashboardSearch]);
 
-  // Computed Metrics (Now uses filteredBoards)
   const metrics = useMemo(() => {
     return {
       total: filteredBoards.length,
@@ -263,12 +252,10 @@ export default function App() {
     };
   }, [filteredBoards]);
 
-  // Detailed list of boards currently in rework (Now uses filteredBoards)
   const activeReworkBoards = useMemo(() => {
     return filteredBoards
       .filter(b => b.currentStage === STAGES.REWORK)
       .map(board => {
-        // We still search the full transactions list for the defect reason history
         const defectTx = [...transactions]
           .find(tx => tx.sn === board.sn && tx.to === STAGES.REWORK);
         
@@ -281,7 +268,6 @@ export default function App() {
       });
   }, [filteredBoards, transactions]);
 
-  // === MASS DATA INGESTION (CLOUD UPLOAD) ===
   const handleFileUpload = (e) => {
     const file = e.target.files[0];
     if (!file) return;
@@ -306,7 +292,6 @@ export default function App() {
         const rawDefect = cols[1] ? cols[1].trim() : 'Unknown';
         const rawLocation = cols[2] ? cols[2].trim() : 'N/A';
 
-        // Poka-Yoke Gate
         const barcodePattern = /^\d{4}-F\d{4,}$/i; 
         if (!barcodePattern.test(rawSn)) {
           errorCount++;
@@ -321,7 +306,6 @@ export default function App() {
         let finalDefect = 'None';
         let finalLocation = 'N/A';
 
-        // === UPDATED: Added logic for "Process in SMT" bulk action ===
         if (bulkAction === 'Process in SMT') {
           toStage = STAGES.SMT; actionLabel = 'Processed in SMT (Bulk)';
         } else if (bulkAction === 'Transfer to Prysm') {
@@ -343,7 +327,7 @@ export default function App() {
         const newTx = {
           id: txId,
           sn: rawSn,
-          timestamp: formatTimestamp(new Date()), // UPDATED: Strict standard time
+          timestamp: formatTimestamp(new Date()), 
           from: fromStage,
           to: toStage,
           action: actionLabel,
@@ -352,7 +336,6 @@ export default function App() {
           location: finalLocation
         };
 
-        // Push commands to cloud batch (Realtime DB Format)
         const boardDocRef = ref(db, `artifacts/${appId}/public/data/boards/${board.sn}`);
         const txDocRef = ref(db, `artifacts/${appId}/public/data/transactions/${txId}`);
         
@@ -373,7 +356,6 @@ export default function App() {
     reader.readAsText(file);
   };
 
-  // === MANUAL SCAN HANDLER (CLOUD WRITE) ===
   const handleScanSubmit = async (e) => {
     e.preventDefault();
     if (!scanSn) return;
@@ -391,7 +373,6 @@ export default function App() {
     let toStage = board.currentStage;
     let actionLabel = 'Scanned';
 
-    // === UPDATED: Added logic for "Process in SMT" scanning action ===
     if (scanAction === 'Process in SMT') {
       toStage = STAGES.SMT; actionLabel = 'Processed in SMT';
     } else if (scanAction === 'Transfer to Prysm') {
@@ -407,7 +388,6 @@ export default function App() {
 
     board.currentStage = toStage;
 
-    // Convert array of selected defects and custom defect into a single readable string
     let finalDefects = [...scanDefects];
     if (customDefect.trim() !== '') {
       finalDefects.push(customDefect.trim());
@@ -418,7 +398,7 @@ export default function App() {
     const newTx = {
       id: txId,
       sn: scanSn,
-      timestamp: formatTimestamp(new Date()), // UPDATED: Strict standard time
+      timestamp: formatTimestamp(new Date()), 
       from: fromStage,
       to: toStage,
       action: actionLabel,
@@ -428,7 +408,6 @@ export default function App() {
     };
 
     try {
-      // Write to Cloud (Realtime DB Format)
       const boardDocRef = ref(db, `artifacts/${appId}/public/data/boards/${board.sn}`);
       const txDocRef = ref(db, `artifacts/${appId}/public/data/transactions/${txId}`);
       
@@ -437,9 +416,9 @@ export default function App() {
       
       setScanSn('');
       setScanLocation('');
-      setScanDefects([]); // Clear multi-select array after successful scan
-      setCustomDefect(''); // Clear custom input
-      setIsDefectDropdownOpen(false); // Close dropdown
+      setScanDefects([]); 
+      setCustomDefect(''); 
+      setIsDefectDropdownOpen(false); 
       showToast(`Success: ${scanSn} routed to ${toStage}`);
     } catch (err) {
       console.error(err);
@@ -447,27 +426,21 @@ export default function App() {
     }
   };
 
-  // === SINGLE DELETE TRANSACTION LOGIC ===
   const confirmDeleteTransaction = async () => {
     if (!txToDelete) return;
     try {
       const txDocRef = ref(db, `artifacts/${appId}/public/data/transactions/${txToDelete.id}`);
       await remove(txDocRef);
 
-      // === RELATIONAL DATA INTEGRITY (ROLLBACK) ===
-      // Find all remaining transactions for this specific board
       const remainingTx = transactions.filter(t => t.sn === txToDelete.sn && t.id !== txToDelete.id);
       const boardDocRef = ref(db, `artifacts/${appId}/public/data/boards/${txToDelete.sn}`);
 
       if (remainingTx.length === 0) {
-        // Condition A: If we deleted the very first scan, erase the board from the dashboard completely
         await remove(boardDocRef);
       } else {
-        // Condition B: If older scans exist, roll the board's status back to its previous state
         const sortedRemaining = [...remainingTx].sort((a, b) => b.id - a.id);
-        const latestTx = sortedRemaining[0]; // The new "most recent" scan
+        const latestTx = sortedRemaining[0]; 
         
-        // Recalculate rework cycles
         const reworkCount = sortedRemaining.filter(t => t.to === STAGES.REWORK).length;
 
         const updatedBoard = {
@@ -484,15 +457,12 @@ export default function App() {
       console.error(err);
       showToast("Database Error: Failed to delete record.", "error");
     } finally {
-      setTxToDelete(null); // Close the modal
+      setTxToDelete(null); 
     }
   };
 
-  // === NEW: MASS DELETE LOGIC ===
   const confirmDeleteAll = async () => {
     try {
-      // POKA-YOKE: We must wipe both the Trace Log and the Dashboard (Boards) simultaneously
-      // to prevent "Orphan Data" and maintain strict Relational Data Integrity.
       const txRef = ref(db, `artifacts/${appId}/public/data/transactions`);
       const boardsRef = ref(db, `artifacts/${appId}/public/data/boards`);
       
@@ -513,7 +483,6 @@ export default function App() {
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <h2 className="text-2xl font-bold text-gray-800 shrink-0">Production Overview</h2>
         
-        {/* NEW: Dashboard Production Lot Filter */}
         <div className="flex items-center gap-3 w-full md:w-auto">
           <div className="relative w-full md:w-64">
             <input 
@@ -533,10 +502,20 @@ export default function App() {
               </button>
             )}
           </div>
-          <div className={`flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-bold shrink-0 ${isDbConnected ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
-            <Server size={14} />
-            {isDbConnected ? 'Cloud Sync Active' : 'Disconnected'}
+
+          {/* DIAGNOSTIC UI COMPONENT */}
+          <div className={`flex flex-col items-end px-3 py-1.5 rounded-lg shrink-0 border ${isDbConnected ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'}`}>
+            <div className={`flex items-center gap-2 text-xs font-bold ${isDbConnected ? 'text-green-700' : 'text-red-700'}`}>
+              <Server size={14} />
+              {isDbConnected ? 'Cloud Sync Active' : 'Disconnected'}
+            </div>
+            {!isDbConnected && connectionError && (
+              <span className="text-[9px] text-red-500 font-mono mt-0.5 truncate max-w-[200px]" title={connectionError}>
+                {connectionError}
+              </span>
+            )}
           </div>
+
         </div>
       </div>
       
@@ -594,7 +573,6 @@ export default function App() {
                   </div>
                   <div className="flex flex-col items-end">
                     <div className="flex items-center gap-2 text-gray-600 mb-1">
-                      {/* POKA-YOKE: Visual text replacement to prevent "SMT to SMT" confusion */}
                       <span className="bg-gray-200 px-2 py-1 rounded text-xs">
                         {tx.from === 'SMT' && tx.to === 'SMT' ? 'Start' : tx.from}
                       </span>
@@ -1144,7 +1122,6 @@ export default function App() {
                     </td>
                     <td className="px-3 py-1.5 text-gray-600 font-mono text-xs" title={tx.user}>{tx.user.length > 15 ? tx.user.substring(0, 15) + '...' : tx.user}</td>
                     <td className="px-3 py-1.5 text-center">
-                       {/* POKA-YOKE: Trigger verification modal instead of immediate deletion */}
                        <button 
                          onClick={() => setTxToDelete(tx)}
                          className="p-1.5 bg-gray-100 hover:bg-red-100 text-gray-400 hover:text-red-600 rounded-lg transition-colors"
@@ -1163,7 +1140,6 @@ export default function App() {
     );
   };
 
-  // Halt rendering until CSS is ready (Poka-Yoke for Canvas specifically)
   if (!tailwindLoaded) {
     return (
       <div style={{ padding: '40px', fontFamily: 'sans-serif', textAlign: 'center', color: '#334155' }}>
@@ -1173,23 +1149,19 @@ export default function App() {
     );
   }
 
-  // === RENDER LOGIN SCREEN IF LOCKED ===
   if (isAppLocked) {
     return (
       <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4 font-sans relative z-0">
-        
-        {/* Decorative Background Element (Replaces the empty void) */}
         <div className="absolute top-0 left-0 w-full h-96 bg-orange-600 transform -skew-y-2 origin-top-left -z-10 shadow-lg"></div>
 
         <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden flex flex-col border border-gray-100 z-10">
-          
-          {/* Redesigned Clean White Header with Official Focuz Logo */}
           <div className="p-8 border-b border-gray-100 flex flex-col items-start bg-white">
             <svg viewBox="0 0 280 60" className="h-12 w-auto mb-4" xmlns="http://www.w3.org/2000/svg">
               <polygon points="0,60 15,0 35,0 20,60" fill="#e04616" />
               <text x="45" y="40" fontFamily="Georgia, serif" fontStyle="italic" fontWeight="bold" fontSize="42" fill="#e04616">Focuz</text>
               <text x="50" y="55" fontFamily="Arial, sans-serif" fontWeight="bold" fontSize="11" fill="#475569" letterSpacing="1">MANUFACTURING SERVICES</text>
             </svg>
+            <h1 className="text-xl font-black tracking-tight text-slate-800">Secure MES Portal</h1>
             <p className="text-orange-600 text-xs font-bold uppercase tracking-wider mt-1 flex items-center gap-1">
               <Lock size={12} /> Authorized Access Only
             </p>
@@ -1204,19 +1176,19 @@ export default function App() {
             )}
             
             <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-1">Username</label>
+              <label className="block text-sm font-semibold text-gray-700 mb-1">Station ID / Username</label>
               <input 
                 type="text" 
                 value={loginUser}
                 onChange={(e) => setLoginUser(e.target.value)}
                 className="w-full p-3 pl-4 border-2 border-gray-200 rounded-xl focus:border-orange-500 focus:ring-4 focus:ring-orange-100 outline-none transition-all"
-                placeholder="Username"
+                placeholder="e.g., smt or prysm"
                 required
               />
             </div>
             
             <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-1">Password</label>
+              <label className="block text-sm font-semibold text-gray-700 mb-1">Passcode</label>
               <input 
                 type="password" 
                 value={loginPass}
@@ -1234,6 +1206,11 @@ export default function App() {
               Access Dashboard <ArrowRight size={20} />
             </button>
           </form>
+          
+          <div className="p-4 bg-gray-50 text-center border-t border-gray-100 flex justify-between items-center px-8">
+             <span className="text-xs text-gray-400 font-medium">IPC-1782 Compliant</span>
+             <span className="text-xs text-gray-400 font-medium">v1.2.0</span>
+          </div>
         </div>
       </div>
     );
@@ -1242,7 +1219,6 @@ export default function App() {
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col md:flex-row font-sans relative">
       
-      {/* CUSTOM TOAST NOTIFICATION (Replaces browser alert) */}
       {toast && (
         <div className={`fixed top-4 left-1/2 transform -translate-x-1/2 px-6 py-3 rounded-lg shadow-xl z-50 flex items-center gap-2 font-bold text-sm ${toast.type === 'error' ? 'bg-red-600 text-white' : 'bg-green-600 text-white'}`}>
           {toast.type === 'error' ? <AlertTriangle size={18} /> : <CheckCircle size={18} />}
@@ -1250,7 +1226,6 @@ export default function App() {
         </div>
       )}
 
-      {/* SINGLE DELETE CONFIRMATION MODAL (Poka-Yoke Gate) */}
       {txToDelete && (
         <div className="fixed inset-0 bg-slate-900/60 flex items-center justify-center z-[60] p-4 backdrop-blur-sm">
           <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden flex flex-col">
@@ -1260,7 +1235,7 @@ export default function App() {
               </div>
               <h3 className="text-2xl font-black text-gray-800 mb-2">Confirm Deletion</h3>
               <p className="text-gray-600 text-sm mb-4">
-                Are you sure you want to permanently delete the log for <span className="font-bold text-red-600">{txToDelete.sn}</span>? This will remove the traceability record from the global database.
+                Are you sure you want to permanently delete the log for <span className="font-bold text-red-600">{txToDelete.sn}</span>?
               </p>
               
               <div className="bg-gray-50 border border-gray-200 rounded-lg p-3 text-left text-xs text-gray-500 font-mono mb-6">
@@ -1288,7 +1263,6 @@ export default function App() {
         </div>
       )}
 
-      {/* NEW: MASS DELETE ALL CONFIRMATION MODAL (Strict Poka-Yoke) */}
       {showDeleteAllModal && (
         <div className="fixed inset-0 bg-slate-900/80 flex items-center justify-center z-[70] p-4 backdrop-blur-md">
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden flex flex-col border-4 border-red-500">
