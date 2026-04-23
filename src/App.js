@@ -10,21 +10,21 @@ import { getDatabase, ref, onValue, set, remove } from 'firebase/database';
 const getFirebaseConfig = () => {
   if (typeof __firebase_config !== 'undefined') {
     const config = JSON.parse(__firebase_config);
-    // Poka-Yoke fallback: Ensure databaseURL exists in Canvas environment
     if (!config.databaseURL) {
-       // ACTION REQUIRED: If this fails, replace this link with your exact Firebase URL
        config.databaseURL = "https://focuz-cloud-mes-default-rtdb.firebaseio.com";
     }
     return config;
   }
+  // FIX: Restored the actual Focuz Manufacturing API keys instead of "YOUR_API_KEY" placeholders
   return {
-    apiKey: "YOUR_API_KEY",
+    apiKey: "AIzaSyDKXNIyKPoZ6wKM8BLerJNsC8iw_wclUHI",
     authDomain: "focuz-cloud-mes.firebaseapp.com",
     databaseURL: "https://focuz-cloud-mes-default-rtdb.firebaseio.com", 
     projectId: "focuz-cloud-mes",
     storageBucket: "focuz-cloud-mes.firebasestorage.app",
     messagingSenderId: "1082764054889",
-    appId: "YOUR_APP_ID"
+    appId: "1:1082764054889:web:00d10ea1382f3b7aaf6df8",
+    measurementId: "G-V65DL05WJ4"
   };
 };
 
@@ -72,7 +72,7 @@ export default function App() {
   const [boards, setBoards] = useState([]);
   const [transactions, setTransactions] = useState([]);
   const [isDbConnected, setIsDbConnected] = useState(false);
-  const [connectionError, setConnectionError] = useState('Initializing Protocol...'); // NEW: Diagnostic Tracker
+  const [connectionError, setConnectionError] = useState('Initializing Protocol...'); // Diagnostic Tracker
 
   // UI State
   const [searchQuery, setSearchQuery] = useState('');
@@ -210,7 +210,7 @@ export default function App() {
     }, (error) => {
       console.error("Database connection lost (Boards):", error);
       setIsDbConnected(false);
-      setConnectionError(`DB Err: ${error.code || error.message}`); // Display exact error
+      setConnectionError(`DB Err: ${error.code || error.message}`); 
     });
 
     const txRef = ref(db, `artifacts/${appId}/public/data/transactions`);
@@ -222,7 +222,7 @@ export default function App() {
     }, (error) => {
       console.error("Database connection lost (Transactions):", error);
       setIsDbConnected(false);
-      setConnectionError(`DB Err: ${error.code || error.message}`); // Display exact error
+      setConnectionError(`DB Err: ${error.code || error.message}`); 
     });
 
     return () => {
@@ -503,7 +503,6 @@ export default function App() {
             )}
           </div>
 
-          {/* DIAGNOSTIC UI COMPONENT */}
           <div className={`flex flex-col items-end px-3 py-1.5 rounded-lg shrink-0 border ${isDbConnected ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'}`}>
             <div className={`flex items-center gap-2 text-xs font-bold ${isDbConnected ? 'text-green-700' : 'text-red-700'}`}>
               <Server size={14} />
