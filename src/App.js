@@ -689,16 +689,6 @@ export default function App() {
                 </tbody>
               </table>
             </div>
-
-            {/* Modal Footer */}
-            <div className="px-6 py-4 bg-gray-50 border-t border-gray-100 flex justify-end">
-              <button 
-                onClick={() => setShowReworkModal(false)}
-                className="px-6 py-2 bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold rounded-lg transition-colors"
-              >
-                Close Window
-              </button>
-            </div>
           </div>
         </div>
       )}
